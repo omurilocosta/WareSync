@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Waresync — Produtos</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/variables.css">
+<link rel="stylesheet" href="assets/css/dashboard.css">
+<style>
+  .stock-badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 6px; }
+  .stock-ok { background: #EAF3DE; color: #3B6D11; }
+  .stock-low { background: #FAEEDA; color: #854F0B; }
+  .stock-out { background: #FCEBEB; color: #B02A2A; }
+  .mov-type-btns { display: flex; gap: 8px; margin-bottom: 14px; }
+  .mov-type-btn { flex: 1; border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--radius-md); padding: 10px; font-size: 13px; font-weight: 500; color: var(--color-text-soft); cursor: pointer; }
+  .mov-type-btn.selected { border-color: var(--color-primary); background: var(--color-primary-light); color: var(--color-primary); }
+</style>
+</head>
+<body data-page="produtos.html">
+
+<div class="app-shell" id="app-shell"></div>
+
+<!-- Modal de cadastro/edição de produto -->
+<div class="modal-overlay" id="produtoModal">
+  <div class="modal-card">
+    <h2 class="modal-title" id="modalTitle">Novo produto</h2>
+    <div class="form-error" id="formError"></div>
+
+    <form id="produtoForm" novalidate>
+      <input type="hidden" id="produtoId" />
+
+      <div class="field">
+        <label for="nome">Nome *</label>
+        <input type="text" id="nome" placeholder="Nome do produto" />
+      </div>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="sku">SKU</label>
+          <input type="text" id="sku" placeholder="Código único" />
+        </div>
+        <div class="field">
+          <label for="codigoBarras">Código de barras</label>
+          <input type="text" id="codigoBarras" placeholder="EAN/GTIN" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="descricao">Descrição</label>
+        <input type="text" id="descricao" placeholder="Descrição detalhada do produto" />
+      </div>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="categoria">Categoria</label>
+          <input type="text" id="categoria" placeholder="Ex: Bebidas" list="categoriasList" />
+          <datalist id="categoriasList"></datalist>
+        </div>
+        <div class="field">
+          <label for="grupo">Grupo</label>
+          <input type="text" id="grupo" placeholder="Ex: Refrigerantes" />
+        </div>
+      </div>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="precoVenda">Preço de venda (R$)</label>
+          <input type="number" id="precoVenda" step="0.01" min="0" placeholder="0,00" />
+        </div>
+        <div class="field">
+          <label for="precoCusto">Preço de custo (R$)</label>
+          <input type="number" id="precoCusto" step="0.01" min="0" placeholder="0,00" />
+        </div>
+      </div>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="unidadeMedida">Unidade de medida</label>
+          <select id="unidadeMedida" style="width:100%;border:1px solid var(--color-border);border-radius:8px;padding:10px;font-family:var(--font-sans)">
+            <option value="UN">UN — Unidade</option>
+            <option value="KG">KG — Quilograma</option>
+            <option value="L">L — Litro</option>
+            <option value="CX">CX — Caixa</option>
+            <option value="PC">PC — Pacote</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="estoqueMinimo">Estoque mínimo</label>
+          <input type="number" id="estoqueMinimo" step="0.01" min="0" placeholder="0" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="estoqueMaximo">Estoque máximo (opcional)</label>
+        <input type="number" id="estoqueMaximo" step="0.01" min="0" placeholder="Sem limite" />
+      </div>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="ncm">NCM</label>
+          <input type="text" id="ncm" placeholder="0000.00.00" />
+        </div>
+        <div class="field">
+          <label for="cfop">CFOP</label>
+          <input type="text" id="cfop" placeholder="5102" />
+        </div>
+      </div>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="cest">CEST</label>
+          <input type="text" id="cest" placeholder="Opcional" />
+        </div>
+        <div class="field">
+          <label for="origemFiscal">Origem</label>
+          <select id="origemFiscal" style="width:100%;border:1px solid var(--color-border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font-sans)">
+            <option value="0">0 - Nacional</option>
+            <option value="1">1 - Estrangeira (importação direta)</option>
+            <option value="2">2 - Estrangeira (mercado interno)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Fornecedores</label>
+        <div id="fornecedoresList" style="border:1px solid var(--color-border);border-radius:8px;padding:10px;max-height:120px;overflow-y:auto;font-size:13px"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelBtn">Cancelar</button>
+        <button type="submit" class="btn-primary" id="saveBtn">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de movimentação de estoque -->
+<div class="modal-overlay" id="movModal">
+  <div class="modal-card">
+    <h2 class="modal-title">Movimentar estoque — <span id="movProdutoNome"></span></h2>
+    <p style="font-size:13px;color:var(--color-text-faint);margin:-10px 0 16px">
+      Estoque atual: <strong id="movEstoqueAtual"></strong>
+    </p>
+    <div class="form-error" id="movFormError"></div>
+
+    <form id="movForm" novalidate>
+      <input type="hidden" id="movProdutoId" />
+
+      <div class="mov-type-btns">
+        <button type="button" class="mov-type-btn selected" data-tipo="entrada">Entrada</button>
+        <button type="button" class="mov-type-btn" data-tipo="saida">Saída</button>
+        <button type="button" class="mov-type-btn" data-tipo="ajuste">Ajuste</button>
+      </div>
+
+      <div class="field">
+        <label for="movQuantidade" id="movQuantidadeLabel">Quantidade a adicionar</label>
+        <input type="number" id="movQuantidade" step="0.01" min="0" placeholder="0" />
+      </div>
+
+      <div class="field">
+        <label for="movMotivo">Motivo (opcional)</label>
+        <input type="text" id="movMotivo" placeholder="Ex: Compra do fornecedor X" />
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="movCancelBtn">Cancelar</button>
+        <button type="submit" class="btn-primary" id="movSaveBtn">Confirmar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="js/shell.js"></script>
+<script src="js/produtos.js"></script>
+</body>
+</html>

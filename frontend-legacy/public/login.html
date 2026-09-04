@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Waresync — Entrar</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/variables.css">
+<link rel="stylesheet" href="assets/css/login.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img class="icon" src="assets/logo/waresync-icon.png" alt="Waresync" />
+    </div>
+
+    <div id="loginView">
+      <h1 class="auth-title">Entrar na sua conta</h1>
+      <p class="auth-subtitle">Acesse o painel do Waresync</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="email">E-mail ou usuário</label>
+          <input type="text" id="email" placeholder="voce@empresa.com" autocomplete="username" />
+        </div>
+
+        <div class="field">
+          <label for="password">Senha</label>
+          <div class="password-wrap">
+            <input type="password" id="password" placeholder="Digite sua senha" autocomplete="current-password" />
+            <button type="button" class="toggle-password" id="toggleLabel">mostrar</button>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <button type="button" class="link-btn" id="showForgotBtn">Esqueceu a senha?</button>
+        </div>
+
+        <button type="submit" class="btn-primary" id="loginButton">Entrar</button>
+      </form>
+    </div>
+
+    <div id="forgotView">
+      <h1 class="auth-title">Recuperar senha</h1>
+      <p class="auth-subtitle">Enviaremos um link de redefinição para seu e-mail</p>
+
+      <div class="success-box" id="successBox"></div>
+
+      <form id="forgotForm" novalidate>
+        <div class="field">
+          <label for="forgotEmail">E-mail cadastrado</label>
+          <input type="text" id="forgotEmail" placeholder="voce@empresa.com" autocomplete="email" />
+        </div>
+
+        <p class="helper-text">Verifique também a caixa de spam caso não encontre o e-mail em alguns minutos.</p>
+
+        <button type="submit" class="btn-primary" id="forgotButton">Enviar link de redefinição</button>
+      </form>
+
+      <div class="back-row">
+        <button type="button" class="link-btn" id="showLoginBtn">← Voltar para o login</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+</body>
+</html>

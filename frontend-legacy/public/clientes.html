@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Waresync — Clientes</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/variables.css">
+<link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body data-page="clientes.html">
+
+<div class="app-shell" id="app-shell"></div>
+
+<div class="modal-overlay" id="clienteModal">
+  <div class="modal-card">
+    <h2 class="modal-title" id="modalTitle">Novo cliente</h2>
+    <div class="form-error" id="formError"></div>
+
+    <form id="clienteForm" novalidate>
+      <input type="hidden" id="clienteId" />
+
+      <div class="field">
+        <label for="nome">Nome *</label>
+        <input type="text" id="nome" placeholder="Nome completo ou razão social" />
+      </div>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="documento">CPF / CNPJ</label>
+          <input type="text" id="documento" placeholder="000.000.000-00" />
+        </div>
+        <div class="field">
+          <label for="telefone">Telefone</label>
+          <input type="text" id="telefone" placeholder="(00) 00000-0000" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input type="text" id="email" placeholder="cliente@email.com" />
+      </div>
+
+      <div class="field">
+        <label for="endereco">Endereço (rua)</label>
+        <input type="text" id="endereco" placeholder="Rua / Avenida" />
+      </div>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="numero">Número</label>
+          <input type="text" id="numero" placeholder="123" />
+        </div>
+        <div class="field">
+          <label for="bairro">Bairro</label>
+          <input type="text" id="bairro" placeholder="Bairro" />
+        </div>
+      </div>
+
+      <div class="field-row-2">
+        <div class="field">
+          <label for="cidade">Cidade</label>
+          <input type="text" id="cidade" placeholder="Cidade" />
+        </div>
+        <div class="field">
+          <label for="estado">Estado</label>
+          <input type="text" id="estado" placeholder="UF" maxlength="2" style="text-transform:uppercase" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="limiteCredito">Limite de crédito (R$)</label>
+        <input type="number" id="limiteCredito" placeholder="0,00" step="0.01" min="0" />
+      </div>
+
+      <div class="field">
+        <label for="observacoes">Observações</label>
+        <input type="text" id="observacoes" placeholder="Observações gerais sobre o cliente" />
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelBtn">Cancelar</button>
+        <button type="submit" class="btn-primary" id="saveBtn">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detalheClienteModal">
+  <div class="modal-card" style="max-width:560px">
+    <h2 class="modal-title" id="detalheClienteTitulo"></h2>
+    <div id="detalheClienteConteudo"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-secondary" id="fecharDetalheClienteBtn">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/shell.js"></script>
+<script src="js/clientes.js"></script>
+</body>
+</html>

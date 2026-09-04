@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Waresync — Relatórios</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/variables.css">
+<link rel="stylesheet" href="assets/css/dashboard.css">
+<style>
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--color-border); margin-bottom: 16px; }
+  .tab-btn { background: none; border: none; padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--color-text-faint); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab-btn.active { color: var(--color-primary); border-color: var(--color-primary); }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-soft); padding: 16px; }
+  .kpi-label { font-size: 12px; color: var(--color-text-faint); margin: 0 0 6px; }
+  .kpi-value { font-size: 22px; font-weight: 600; margin: 0; }
+  .filtro-periodo { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .filtro-periodo input { border: 1px solid var(--color-border); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: var(--font-sans); }
+</style>
+</head>
+<body data-page="relatorios.html">
+
+<div class="app-shell" id="app-shell"></div>
+
+<script src="js/shell.js"></script>
+<script src="js/relatorios.js"></script>
+</body>
+</html>
