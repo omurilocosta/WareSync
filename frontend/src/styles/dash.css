@@ -637,6 +637,85 @@
     font-size: 20px;
 }
 
+.movement-badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.movement-entrada {
+    background: #eaf3de;
+    color: #3b6d11;
+}
+
+.movement-saida {
+    background: #fcebeb;
+    color: #b02a2a;
+}
+
+.movement-ajuste {
+    background: #e6f1fb;
+    color: #185fa5;
+}
+
+.category-create {
+    display: flex;
+    gap: 8px;
+}
+
+.category-create input {
+    flex: 1;
+}
+
+.supplier-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.supplier-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.supplier-option:hover {
+    background: var(--color-surface-muted);
+}
+
+.supplier-option input {
+    width: auto;
+}
+
+.supplier-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.supplier-header label {
+    margin: 0;
+}
+
+@media (max-width: 700px) {
+    .supplier-list {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 700px) {
     .form-grid {
         grid-template-columns: 1fr;

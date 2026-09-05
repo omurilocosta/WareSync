@@ -2,94 +2,68 @@
 
 Este arquivo registra as principais alterações, correções, integrações e melhorias realizadas no projeto **WareSync**.
 
-> A ideia é manter este documento sempre atualizado conforme o desenvolvimento avança.
+> Este documento deve continuar sendo atualizado conforme o desenvolvimento avança.
 
 ---
 
-## 04/09/2026 - UP040920261740
+# 04/09/2026
 
-### Estrutura geral do projeto
+## Estrutura geral do projeto
 
 - Iniciada a migração do frontend legado em HTML/CSS/JavaScript para **React**.
 - O frontend antigo foi preservado em `frontend-legacy/`.
 - Criado um novo frontend em `frontend/`.
 - O backend existente foi mantido em `backend/`.
-- Mantida a arquitetura atual com Node.js, Express, TypeScript e PostgreSQL.
+- Mantida a arquitetura com Node.js, Express, TypeScript e PostgreSQL.
 
-### Frontend — React
+---
+
+## Frontend — React
 
 - Criado o novo frontend utilizando **React + Vite**.
-- Configurado o projeto para utilizar **ESLint**.
-- Instalado e configurado o **React Router**.
-- Criada a estrutura inicial:
+- Configurado ESLint.
+- Instalado e configurado React Router.
+- Criada estrutura com `components`, `pages`, `services` e `styles`.
+- Reaproveitados estilos, logos e assets do frontend legado.
 
-```text
-frontend/
-├── public/
-├── src/
-│   ├── components/
-│   │   └── layouts/
-│   ├── pages/
-│   ├── services/
-│   ├── styles/
-│   ├── App.jsx
-│   └── main.jsx
-```
+---
 
-- Removidos arquivos padrões do Vite que não seriam utilizados.
-- Reaproveitados os arquivos de estilo do frontend legado.
-- Reaproveitados os assets e logos originais do WareSync.
-
-### Layout principal
+## Layout principal
 
 - Criado `src/components/layouts/AppLayout.jsx`.
-- Migrado o layout compartilhado do antigo `shell.js` para React.
-- Criada a sidebar com os grupos Painel, Vendas, Estoque, Financeiro, Clientes, Fiscal, Relatórios e Configurações.
-- Implementados submenus expansíveis utilizando estado React.
-- Criada a Topbar.
+- Migrado o antigo `shell.js` para React.
+- Criadas Sidebar e Topbar.
+- Implementados grupos e submenus de navegação.
 - Implementado `Outlet` para renderização das páginas internas.
-- Adicionada navegação utilizando `NavLink`.
-- Mantido o estilo visual original do WareSync.
+- Adicionada navegação com `NavLink`.
 
-### Dashboard
+---
+
+## Dashboard
 
 - Criada `src/pages/Dashboard.jsx`.
-- Migrado o dashboard antigo para React.
 - Criado `src/services/dashboardService.js`.
-- Criado serviço central de API em `src/services/api.js`.
-- Dashboard conectado à rota `GET /api/dashboard/resumo`.
-- Mantida a utilização de `credentials: 'include'` para funcionamento da sessão via cookie.
-- Migrados para React: total de clientes, total de produtos, valor total em estoque, vendas do dia, ticket médio, vendas recentes, produtos com estoque baixo e clientes recentes.
+- Criado `src/services/api.js`.
+- Dashboard conectado a `GET /api/dashboard/resumo`.
+- Mantido `credentials: 'include'` para sessão.
+- Migrados indicadores de clientes, produtos, estoque, vendas, ticket médio, vendas recentes, estoque baixo e clientes recentes.
 
-### Autenticação
+---
+
+## Autenticação
 
 - Criada `src/pages/Login.jsx`.
 - Criado `src/services/authService.js`.
-- Login conectado à API existente.
-- Implementado login utilizando sessão do Express.
+- Implementado login com sessão do Express.
 - Criado `src/components/ProtectedRoute.jsx`.
-- Rotas internas agora exigem sessão válida.
-- Corrigido comportamento em que `/dashboard` poderia abrir sem autenticação.
-- Implementada verificação real da resposta de `GET /api/auth/sessao`.
-- Adicionado tratamento para erros HTTP `401`.
-- Implementado redirecionamento automático para `/login` quando não autenticado.
-- Exibição do usuário real autenticado no Header.
-- Geração automática das iniciais do usuário no avatar.
-- Exibição do cargo do usuário.
-- Implementado botão **Sair**.
-- Logout integrado com `POST /api/auth/logout`.
+- Implementada proteção real das rotas privadas.
+- Implementado tratamento de erro `401`.
+- Implementado redirecionamento para `/login`.
+- Exibido usuário autenticado no Header.
+- Implementado logout.
+- Corrigido encoding do nome do usuário no seed.
 
-### Correção de encoding
-
-Foi identificado que o nome do usuário estava salvo como `UsuÃ¡rio Waresync` em vez de `Usuário Waresync`.
-
-- Corrigido o script `backend/scripts/seed-admin.js`.
-- O seed passou a atualizar também o nome do usuário administrador.
-- Encoding corrigido na origem, diretamente no dado armazenado.
-
-### Usuário administrador de desenvolvimento
-
-O seed foi utilizado para criar/corrigir o usuário de teste:
+Credenciais locais de desenvolvimento:
 
 ```text
 E-mail: admin@waresync.com
@@ -97,337 +71,269 @@ Senha: senha123
 Cargo: administrador
 ```
 
-> Estas credenciais são destinadas apenas ao ambiente de desenvolvimento.
-
 ---
 
-## Prisma ORM
+# Prisma ORM
 
-### Instalação
-
-Inicialmente foi instalada uma versão Release Candidate do Prisma 8.
-
-Ela foi substituída pela versão estável:
-
-```text
-Prisma CLI: 7.10.0
-@prisma/client: 7.10.0
-@prisma/adapter-pg: 7.10.0
-```
-
-- Mantido `pg`, pois outros módulos do backend ainda utilizam SQL manual.
-- Prisma e `pg` coexistem temporariamente durante a migração gradual.
-
-### Configuração do Prisma
-
+- Instalado Prisma estável `7.10.0`.
+- Instalados `@prisma/client` e `@prisma/adapter-pg`.
+- Mantido `pg` temporariamente para módulos ainda não migrados.
 - Criado `backend/prisma.config.ts`.
-- Adicionada variável `DATABASE_URL` ao `.env`, apontando para o mesmo PostgreSQL já utilizado pelo backend.
 - Criado `backend/prisma/schema.prisma`.
-- Configuração do Prisma Client:
-
-```prisma
-generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
-  moduleFormat = "cjs"
-}
-```
-
-- Utilizado `moduleFormat = "cjs"` para compatibilidade com o backend TypeScript/CommonJS atual.
-
-### Introspecção do banco
-
-Executado:
-
-```bash
-npx prisma db pull
-```
-
-Resultado:
-
-```text
-20 models introspected
-```
-
-- O Prisma passou a utilizar a estrutura já existente no PostgreSQL.
-- Nenhuma tabela foi recriada.
-- Nenhum dado foi apagado.
-- As `CHECK CONSTRAINTS` existentes continuam sendo aplicadas pelo PostgreSQL.
-
-Executado:
-
-```bash
-npx prisma generate
-```
-
-Prisma Client gerado em `backend/src/generated/prisma`.
-
-### Conexão Prisma
-
+- Configurado Prisma Client em CommonJS.
+- Executado `npx prisma db pull`.
+- Introspectados 20 modelos existentes.
+- Executado `npx prisma generate`.
 - Criado `backend/src/config/prisma.ts`.
-- Configurado `PrismaClient`.
-- Configurado `PrismaPg`.
-- Utilizada a mesma `DATABASE_URL` do PostgreSQL.
-- O build do backend foi validado com sucesso após a integração.
+- Validado build do backend.
 
 ---
 
-## Módulo Produtos — Migração para Prisma
+# Produtos — Backend
 
-O módulo de Produtos foi migrado de SQL manual com `pg` para Prisma.
+O módulo de Produtos foi migrado integralmente para Prisma.
 
-Arquivo principal:
+Operações migradas:
 
 ```text
-backend/src/modules/produtos/produtos.service.ts
+listarProdutos()          ✅
+buscarProdutoPorId()      ✅
+criarProduto()            ✅
+atualizarProduto()        ✅
+inativarProduto()         ✅
+registrarMovimentacao()   ✅
+listarMovimentacoes()     ✅
 ```
 
-### Listagem de produtos
+Melhorias incluídas:
 
-Migrado `listarProdutos()` de `pool.query()` para `prisma.produtos.findMany()`.
-
-Mantidos:
-
-- filtro de produtos ativos;
-- busca por nome;
-- busca por SKU;
-- busca por código de barras;
+- busca por nome, SKU e código de barras;
 - filtro por categoria;
-- relacionamento com categoria;
-- ordenação por nome.
-
-Também foi implementada conversão de campos `Decimal` do Prisma para `number`.
-
-### Busca por ID
-
-Migrado `buscarProdutoPorId()` para Prisma utilizando `findUnique()`.
-
-- Mantida a relação com categoria.
-- Mantido erro `404` para produto inexistente.
-
-### Cadastro de produto
-
-Migrado `criarProduto()` para Prisma utilizando `findUnique()` e `create()`.
-
-- Mantida validação de nome obrigatório.
-- Implementada validação amigável para SKU duplicado.
-- Mantidos valores padrão.
-- Produtos são cadastrados inicialmente com `estoque_atual = 0`.
-- O estoque deve ser alterado através de movimentações.
-
-### Atualização de produto
-
-Migrado `atualizarProduto()` para Prisma.
-
-Melhorias adicionadas:
-
-- validação de SKU utilizado por outro produto;
-- validação de código de barras utilizado por outro produto;
-- preservação das regras existentes;
-- conversão correta de valores numéricos.
-
-### Inativação de produto
-
-Migrado `inativarProduto()` para Prisma.
-
-- O produto não é apagado fisicamente.
-- É utilizado `ativo = false`.
-- Isso preserva relacionamentos históricos com vendas, movimentações, inventários e demais registros.
+- validação de SKU duplicado;
+- validação de código de barras duplicado;
+- inativação lógica;
+- conversão de `Decimal` para `number`.
 
 ### Movimentação de estoque
 
-Migrado `registrarMovimentacao()` para Prisma.
-
-A implementação antiga utilizava:
-
-```text
-BEGIN
-SELECT ... FOR UPDATE
-UPDATE
-INSERT
-COMMIT / ROLLBACK
-```
-
-A nova implementação utiliza `prisma.$transaction()` com nível de isolamento `Serializable`.
-
-Também foi implementado retry automático para conflitos Prisma `P2034`, com até 3 tentativas.
-
-Foram preservadas as regras:
-
-- entrada de estoque;
-- saída de estoque;
-- ajuste de estoque;
-- bloqueio de saída maior que o saldo;
-- registro do usuário responsável;
-- registro do motivo;
-- atualização do estoque e criação da movimentação dentro da mesma transação.
-
-### Histórico de movimentações
-
-Migrado `listarMovimentacoes()` para Prisma.
-
-- Relacionamento com usuário carregado pelo Prisma.
-- Mantido limite das últimas 50 movimentações.
-- Mantida ordenação por data decrescente.
-- Adicionado `usuario_nome` ao tipo `MovimentacaoEstoque`.
-
-Com isso, o módulo de Produtos deixou de depender diretamente de `pool.query()`.
+- Migrada para `prisma.$transaction()`.
+- Utilizado isolamento `Serializable`.
+- Implementado retry para erro `P2034`.
+- Mantidas regras de entrada, saída, ajuste e bloqueio de estoque negativo.
 
 ---
 
-## Produtos — Frontend React
+# Produtos — Frontend React
 
-Criado `frontend/src/services/produtosService.js` com serviços para:
+Criado `frontend/src/services/produtosService.js`.
 
-- listar produtos;
-- buscar produto por ID;
-- criar produto;
-- atualizar produto;
-- inativar produto;
-- registrar movimentação;
-- listar movimentações.
+Criada página de Produtos em React.
 
-### Página de produtos
+Funcionalidades concluídas:
 
-Criada a página React de Produtos em `frontend/src/pages/Produtos.jsx` ou `Produto.jsx`, conforme o nome utilizado localmente no projeto.
+- listagem;
+- busca;
+- cadastro;
+- edição;
+- inativação com confirmação;
+- movimentação;
+- histórico de movimentações.
 
-Rota criada:
+Indicadores de estoque:
 
 ```text
-/estoque/produtos
+Em estoque
+Estoque baixo
+Sem estoque
 ```
 
-Implementados:
+O produto novo começa com:
 
-- listagem de produtos;
-- busca em tempo real;
-- debounce de 300 ms;
-- preço formatado em BRL;
-- exibição de estoque;
-- indicadores `Em estoque`, `Estoque baixo` e `Sem estoque`.
+```text
+estoque_atual = 0
+```
 
-### Cadastro de produto
+e o saldo deve ser alterado através de movimentações.
 
-Implementado modal **Novo produto**.
+---
 
-Campos implementados:
+# Categorias
+
+## Backend
+
+Categorias migradas para Prisma.
+
+Operações:
+
+```text
+listar categorias   ✅
+criar categoria     ✅
+```
+
+Foi utilizado `upsert()` para preservar o comportamento existente de conflito por nome.
+
+## Frontend
+
+Criado `frontend/src/services/categoriasService.js`.
+
+Integrado ao formulário de Produtos:
+
+- carregar categorias;
+- criar categoria;
+- selecionar categoria;
+- salvar `categoria_id`.
+
+### Correção realizada
+
+As categorias eram recebidas corretamente pela API, mas não apareciam no `<select>`.
+
+Foi corrigido o JSX para manter:
+
+```jsx
+{categorias.map(...)}
+```
+
+dentro do próprio `<select>`.
+
+Funcionamento confirmado.
+
+---
+
+# Fornecedores
+
+## Backend
+
+O módulo de Fornecedores foi migrado de `pg` para Prisma.
+
+Operações concluídas:
+
+```text
+listar fornecedores          ✅
+criar fornecedor             ✅
+editar fornecedor            ✅
+inativar fornecedor          ✅
+vincular fornecedor/produto  ✅
+listar fornecedores produto  ✅
+```
+
+### Relação Produto ↔ Fornecedor
+
+Mantida através de:
+
+```text
+produto_fornecedores
+```
+
+A atualização dos vínculos é feita em transação Prisma.
+
+Também foi corrigido um erro TypeScript adicionando tipo explícito:
+
+```typescript
+(fornecedorId: number)
+```
+
+## Frontend
+
+Criado `frontend/src/services/fornecedoresService.js`.
+
+Integrado ao formulário de Produtos:
+
+- carregar fornecedores;
+- selecionar múltiplos fornecedores;
+- salvar vínculos produto ↔ fornecedor;
+- carregar fornecedores já vinculados ao editar.
+
+O relacionamento Produto ↔ Fornecedor foi testado e confirmado como funcionando.
+
+---
+
+# Último ponto confirmado
+
+O último ponto confirmado como funcionando foi:
+
+```text
+Produto ↔ Fornecedor
+```
+
+com múltiplos fornecedores sendo vinculados e recarregados corretamente na edição do produto.
+
+---
+
+# Próximo passo ao retomar
+
+Foi proposto, mas ainda não confirmado como concluído, o cadastro de fornecedor diretamente pelo React.
+
+Objetivo:
+
+```text
++ Novo fornecedor
+```
+
+dentro do formulário de Produtos, abrindo um modal com:
 
 - nome;
-- SKU;
-- código de barras;
-- descrição;
-- unidade de medida;
-- preço de venda;
-- preço de custo;
-- estoque mínimo;
-- estoque máximo;
-- NCM;
-- CFOP;
-- CEST;
-- origem fiscal.
+- documento;
+- telefone;
+- e-mail.
 
-Após salvar:
-
-- o produto é criado via API;
-- o modal é fechado;
-- o formulário é limpo;
-- a listagem é atualizada automaticamente.
-
-Foi corrigido também um erro de escopo em que `setForm` não estava acessível por `handleChange`.
-
-### Movimentação de estoque no React
-
-Implementado botão `Movimentar`.
-
-Criado modal de movimentação com:
-
-- produto selecionado;
-- estoque atual;
-- tipo da movimentação;
-- quantidade;
-- motivo.
-
-Tipos disponíveis:
+Fluxo planejado:
 
 ```text
-Entrada
-Saída
-Ajuste
-```
-
-Fluxo atual:
-
-```text
-React
-↓
-produtosService.js
-↓
-API Express
-↓
-Prisma Transaction
-↓
+Novo fornecedor
+      ↓
+POST /api/fornecedores
+      ↓
+Prisma
+      ↓
 PostgreSQL
+      ↓
+Atualiza lista no React
+      ↓
+Novo fornecedor fica selecionado
 ```
 
-Testes realizados com sucesso:
-
-- entrada de estoque;
-- saída de estoque;
-- atualização automática do saldo na tabela;
-- bloqueio de saída maior que o estoque disponível.
-
----
-
-## Situação atual
-
-Até este ponto:
+Depois disso, o próximo grande módulo planejado é:
 
 ```text
-Frontend React                 ✅
-React Router                   ✅
-Layout principal               ✅
-Dashboard                      ✅
-Login                          ✅
-ProtectedRoute                 ✅
-Sessão                         ✅
-Logout                         ✅
-PostgreSQL                     ✅
-Prisma 7.10.0                  ✅
-Prisma Client                  ✅
-Módulo Produtos no Prisma      ✅
-Listagem React de produtos     ✅
-Cadastro React de produtos     ✅
-Movimentação React             ✅
+Clientes
 ```
 
 ---
 
-## Próximo passo
-
-O desenvolvimento foi pausado após validar a movimentação de estoque pela interface React.
-
-O próximo passo planejado é:
+# Situação atual resumida
 
 ```text
-Implementar o botão "Editar" na página de Produtos
+Frontend React                     ✅
+React Router                       ✅
+Layout principal                   ✅
+Dashboard                          ✅
+Login                              ✅
+ProtectedRoute                     ✅
+Sessão                             ✅
+Logout                             ✅
+PostgreSQL                         ✅
+Prisma 7.10.0                      ✅
+Prisma Client                      ✅
+Produtos backend em Prisma         ✅
+Produtos frontend                  ✅
+Cadastro de Produto                ✅
+Edição de Produto                  ✅
+Inativação de Produto              ✅
+Movimentação de Estoque            ✅
+Histórico de Movimentações         ✅
+Categorias backend em Prisma       ✅
+Categorias no frontend             ✅
+Fornecedores backend em Prisma     ✅
+Produto ↔ Fornecedor               ✅
+Novo fornecedor no React           ⏳ pendente de conclusão/teste
+Clientes                           ⏳ próximo módulo
 ```
-
-A intenção é reutilizar o mesmo formulário/modal de cadastro, evitando duplicação de código.
-
-Depois disso, a sequência prevista inclui:
-
-- inativação pela interface React;
-- histórico de movimentações no frontend;
-- categorias;
-- fornecedores;
-- migração dos demais módulos do backend para Prisma;
-- migração das demais páginas HTML para React.
 
 ---
 
 ## Observações
 
-- Não executar `npm audit fix` automaticamente sem revisar as atualizações, pois o projeto ainda está em migração e atualizações de dependências podem introduzir incompatibilidades.
-- O frontend legado deve permanecer em `frontend-legacy/` até a migração completa.
-- O diretório gerado pelo Prisma em `src/generated/prisma` não deve ser editado manualmente.
-- Novas alterações devem ser adicionadas neste arquivo em ordem cronológica.
+- Não executar `npm audit fix` automaticamente sem revisar o impacto.
+- Manter `frontend-legacy/` até a migração completa.
+- Não editar manualmente `src/generated/prisma/`.
+- Atualizar este arquivo sempre que uma nova funcionalidade, correção ou migração relevante for concluída.

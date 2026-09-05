@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { criarProduto, listarProdutos, movimentarEstoque } from '../services/produtoService';
+import { atualizarProduto, criarProduto, inativarProduto, listarMovimentacoes, listarProdutos, movimentarEstoque} from '../services/produtoService'
+import { criarCategoria, listarCategorias } from '../services/categoriaService';
+import { atualizarFornecedoresDoProduto, criarFornecedor, listarFornecedores,  listarFornecedoresDoProduto } from '../services/fornecedoresService';
 
 function formatMoeda(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', {
@@ -41,6 +43,7 @@ function Produtos() {
         sku: '',
         codigo_barras: '',
         descricao: '',
+        categoria_id: '',
         unidade_medida: 'UN',
         preco_vendae: '',
         preco_custo: '',
@@ -60,6 +63,29 @@ function Produtos() {
         motivo: '',
     })
 
+    const [produtoEmEdicao, setProdutoEmEdicao] = useState(null);
+
+    const [modalHistoricoAberto, setModalHistoricoAberto] = useState(false);
+    const [historico, setHistorico] = useState([]);
+    const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+
+    const [categorias, setCategorias] = useState([]);
+    const [novaCategoria, setNovaCategoria] = useState('');
+
+    const [fornecedores, setFornecedores] = useState([]);
+    const [fornecedoresSelecionados, setFornecedoresSelecionados] = useState([]);
+
+    const [modalFornecedorAberto, setModalFornecedorAberto] = useState(false);
+
+    const [salvandoFornecedor, setSalvandoFornecedor] =  useState(false);
+
+    const [fornecedorForm, setFornecedorForm] = useState({
+        nome: '',
+        documento: '',
+        telefone: '',
+        email: '',
+    });
+
     function handleChange(event) {
         const { name, value } = event.target;
 
@@ -70,11 +96,13 @@ function Produtos() {
     }
 
     function limparFormulario() {
+        setProdutoEmEdicao(null);
         setForm({
             nome: '',
             sku: '',
             codigo_barras: '',
             descricao: '',
+            categoria_id: '',
             unidade_medida: 'UN',
             preco_venda: '',
             preco_custo: '',
@@ -87,15 +115,12 @@ function Produtos() {
         });
     }
 
-    async function handleCriarProduto(event) {
+    async function handleSalvarProduto(event) {
         event.preventDefault();
-
         try {
             setErro('');
-
-            await criarProduto({
-            ...form,
-
+            const dados = {
+                ...form,
                 preco_venda: form.preco_venda === ''
                     ? 0
                     : Number(form.preco_venda),
@@ -111,12 +136,26 @@ function Produtos() {
                 estoque_maximo: form.estoque_maximo === ''
                     ? null
                     : Number(form.estoque_maximo),
-            });
+                categoria_id: form.categoria_id === ''
+                    ? null
+                    : Number(form.categoria_id),
+            };
+
+            let produtoSalvo;
+
+            if (produtoEmEdicao) {
+                const response = await atualizarProduto(produtoEmEdicao.id, dados);
+                produtoSalvo = response.data || produtoEmEdicao;
+            } else {
+                const response = await criarProduto(dados);
+                produtoSalvo = response.data;
+            }
+            if (produtoSalvo?.id) {
+                await atualizarFornecedoresDoProduto(produtoSalvo.id, fornecedoresSelecionados)
+            }
 
             setModalAberto(false);
-
             limparFormulario();
-
             await carregarProdutos();
         } catch (error) {
             setErro(error.message);
@@ -155,6 +194,88 @@ function Produtos() {
         }));
     }
 
+    async function abrirEdicao(produto) {
+        setProdutoEmEdicao(produto)
+
+        setForm({
+            nome: produto.nome || '',
+            sku: produto.sku || '',
+            codigo_barras: produto.codigo_barras || '',
+            descricao: produto.descricao || '',
+            categoria_id: produto.categoria_id ?? '',
+            unidade_medida: produto.unidade_medida || 'UN',
+            preco_venda: produto.preco_venda ?? '',
+            preco_custo: produto.preco_custo ?? '',
+            estoque_minimo: produto.estoque_minimo ?? '',
+            estoque_maximo: produto.estoque_maximo ?? '',
+            ncm: produto.ncm || '',
+            cfop: produto.cfop || '',
+            cest: produto.cest || '',
+            origem_fiscal: produto.origem_fiscal || '',
+        })
+        try{
+            const response = await listarFornecedoresDoProduto(produto.id)
+            setFornecedoresSelecionados(
+                (response.data || []).map(
+                    (fornecedor) => fornecedor.id
+                )
+            )
+        } catch (error) {
+            setErro(error.message)
+        }
+        setModalAberto(true)
+    }
+
+    function toggleFornecedor(fornecedorId) {
+        setFornecedoresSelecionados((atuais) => {
+            if (atuais.includes(fornecedorId)) {
+                return atuais.filter((id) => id !== fornecedorId);
+            }
+            return [...atuais, fornecedorId];
+        } );
+    }
+
+    async function abrirHistorico(produto) {
+        try {
+            setProdutoSelecionado(produto);
+            setModalHistoricoAberto(true);
+            setCarregandoHistorico(true);
+            setErro('');
+
+            const response = await listarMovimentacoes(produto.id);
+
+            setHistorico(response.data || []);
+        } catch (error) {
+            setErro(error.message);
+        } finally {
+            setCarregandoHistorico(false);
+        }
+    }
+
+    function fecharHistorico() {
+        setModalHistoricoAberto(false);
+        setHistorico([]);
+        setProdutoSelecionado(null);
+    }
+
+    async function handleInativarProduto(produto) {
+        const confirmou = window.confirm(
+            `Deseja realmente inativar o produto "${produto.nome}"?`
+        );
+
+        if (!confirmou) {
+            return;
+        }
+
+        try {
+            setErro('');
+            await inativarProduto(produto.id);
+            await carregarProdutos();
+        } catch (error) {
+            setErro(error.message);
+        }
+    }
+
     async function handleMovimentacao(event) {
         event.preventDefault()
 
@@ -181,6 +302,133 @@ function Produtos() {
             setErro(error.message)
         }
     }
+
+    async function carregarCategorias() {
+        try {
+            const response = await listarCategorias();
+
+            setCategorias(response.data || []);
+        } catch (error) {
+            setErro(error.message);
+        }
+    }
+
+    async function handleCriarCategoria() {
+        const nome = novaCategoria.trim()
+
+        if (!nome){
+            setErro('Digite o nome da categoria.')
+            return;
+        }
+        try{
+            setErro('');
+            const response = await criarCategoria(nome);
+            const categoriaCriada = response.data
+            await carregarCategorias()
+
+            if(!categoriaCriada?.id){
+                throw new Error('A categoria foi criada, mas a API não retornou os dados corretamente.')
+            }
+            
+            setForm((anterior) => ({
+                ...anterior,
+                categoria_id: String(categoriaCriada.id),
+            }))
+            setNovaCategoria('')
+        } catch (error) {
+            setErro(error.message)
+        }
+    }
+
+    async function carregarFornecedores() {
+        try {
+            const response = await listarFornecedores();
+
+            setFornecedores(response.data || []);
+        } catch (error) {
+            setErro(error.message);
+        }
+    }
+
+    function handleFornecedorChange(event) {
+        const { name, value } = event.target;
+
+        setFornecedorForm((anterior) => ({
+            ...anterior,
+            [name]: value,
+        }));
+    }
+
+    function limparFornecedorForm() {
+        setFornecedorForm({
+            nome: '',
+            documento: '',
+            telefone: '',
+            email: '',
+        });
+    }
+
+    function fecharModalFornecedor() {
+        setModalFornecedorAberto(false);
+        limparFornecedorForm();
+    }
+
+    async function handleCriarFornecedor(event) {
+        event.preventDefault();
+
+        const nome = fornecedorForm.nome.trim();
+
+        if (!nome) {
+            setErro('Informe o nome do fornecedor.');
+            return;
+        }
+
+        try {
+            setSalvandoFornecedor(true);
+            setErro('');
+
+            const response = await criarFornecedor({
+                nome,
+                documento: fornecedorForm.documento.trim() || null,
+                telefone: fornecedorForm.telefone.trim() || null,
+                email: fornecedorForm.email.trim() || null,
+            });
+
+            const fornecedorCriado = response.data;
+
+            if (!fornecedorCriado?.id) { throw new Error('Não foi possível identificar o fornecedor criado.');}
+
+            // Atualiza a lista sem precisar recarregar a página
+            setFornecedores((atuais) =>
+                [...atuais, fornecedorCriado].sort((a, b) =>
+                    a.nome.localeCompare(b.nome)
+                )
+            );
+
+            // Já deixa o novo fornecedor marcado no produto
+            setFornecedoresSelecionados((atuais) => [
+                ...new Set([
+                    ...atuais,
+                    fornecedorCriado.id,
+                ]),
+            ]);
+
+            fecharModalFornecedor();
+        } catch (error) {
+            setErro(error.message);
+        } finally {
+            setSalvandoFornecedor(false);
+        }
+    }
+
+    useEffect(() => {
+        carregarCategorias();
+        carregarFornecedores();
+    }, []);
+
+    useEffect(() => {
+        carregarCategorias();
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -213,7 +461,7 @@ function Produtos() {
                     <p className="page-subtitle">Cadastro e controle de estoque</p>
                 </div>
 
-                <button type="button" className="btn-primary" onClick={() => setModalAberto(true)}>
+                <button type="button" className="btn-primary" onClick={() => {limparFormulario(); setModalAberto(true)}}>
                     + Novo produto
                 </button>
             </div>
@@ -255,8 +503,9 @@ function Produtos() {
                             <td><StockBadge produto={produto}/></td>
                             <td className="actions">
                                 <button type="button" className="btn-secondary" onClick={() => abrirMovimentacao(produto)}>Movimentar</button>
-                                <button type="button" className="btn-secondary">Editar</button>
-                                <button type="button" className="btn-danger">Inativar</button>
+                                <button type='button' className='btn-secondary' onClick={() => abrirHistorico(produto)}>Histórico</button>
+                                <button type="button" className="btn-secondary" onClick={() => abrirEdicao(produto)}>Editar</button>
+                                <button type="button" className="btn-danger" onClick={() => handleInativarProduto(produto)}>Inativar</button>
                             </td>
                         </tr>
                     ))}
@@ -270,14 +519,14 @@ function Produtos() {
                 <div className="modal-card">
                     <div className="modal-header">
                         <div>
-                            <h2>Novo produto</h2>
-                            <p>Cadastre um novo item no estoque.</p>
+                            <h2>{produtoEmEdicao ? 'Editar produto' : 'Novo produto'}</h2>
+                            <p>{produtoEmEdicao ? 'Atualize as informações do produto.' : 'Cadastre um novo item no estoque.'}</p>
                         </div>
 
                         <button type="button" className="modal-close" onClick={() => { setModalAberto(false);limparFormulario();}}>×</button>
                     </div>
 
-                    <form onSubmit={handleCriarProduto}>
+                    <form onSubmit={handleSalvarProduto}>
                         <div className="modal-body">
                             <div className="form-grid">
                                 <div className="form-field form-field-full">
@@ -288,6 +537,42 @@ function Produtos() {
                                 <div className="form-field">
                                     <label>SKU</label>
                                     <input name="sku" value={form.sku} onChange={handleChange}/>
+                                </div>
+
+                                <div className="form-field">
+                                    <label>Categoria</label>
+                                    <select name="categoria_id" value={form.categoria_id} onChange={handleChange}>
+                                        <option value="">Sem Categoria</option>
+                                        {categorias.map((categoria) => {
+                                            return(
+                                                <option key={categoria.id} value={String(categoria.id)}>{categoria.nome}</option>
+                                            )
+                                        })}
+                                    </select>
+                                </div>
+
+                                <div className="form-field form-field-full">
+                                    <label>Nova categoria</label>
+                                    <div className="category-create">
+                                        <input type="text" placeholder='Ex.: Periféricos' value={novaCategoria} onChange={(event) => setNovaCategoria(event.target.value)}/>
+                                        <button type='button' className='btn-secondary' onClick={handleCriarCategoria}>Adicionar</button>
+                                    </div>
+                                </div>
+
+                                <div className="form-field form-field-full">
+                                    <label>Fornecedores</label>
+                                    <button type='button' className='btn-secondary' onClick={() => setModalFornecedorAberto(true)}>+ Novo fornecedor</button>
+                                    {fornecedores.length === 0 ? (
+                                        <div className="empty-state">Nenhum fornecedor cadastrado.</div>
+                                        ) : (
+                                        <div className="supplier-list">{fornecedores.map((fornecedor) => (
+                                            <label key={fornecedor.id} className="supplier-option">
+                                                <input type="checkbox" checked={fornecedoresSelecionados.includes(fornecedor.id)} onChange={() => toggleFornecedor(fornecedor.id)}/>
+                                                <span>{fornecedor.nome}</span>
+                                            </label>
+                                        ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="form-field">
@@ -363,7 +648,7 @@ function Produtos() {
                             </button>
 
                             <button type="submit" className="btn-primary">
-                                Salvar produto
+                                {produtoEmEdicao ? 'Salvar alterações' : 'Salvar produto'}
                             </button>
                         </div>
                     </form>
@@ -415,6 +700,111 @@ function Produtos() {
                             <div className="modal-footer">
                                 <button type="button" className="btn-secondary" onClick={fecharMovimentacao}>Cancelar</button>
                                 <button type="submit" className="btn-primary">Confirmar movimentação</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {modalHistoricoAberto && produtoSelecionado && (
+                <div className="modal-backdrop">
+                    <div className="modal-card">
+                        <div className="modal-header">
+                            <div>
+                                <h2>Histórico de movimentações</h2>
+                                <p>{produtoSelecionado.nome}</p>
+                            </div>
+
+                            <button type="button" className="modal-close" onClick={fecharHistorico}> × </button>
+                        </div>
+
+                        <div className="modal-body">{carregandoHistorico ? (
+                        <div className="empty-state">Carregando histórico...</div>
+                            ) : historico.length === 0 ? (
+                            <div className="empty-state">Nenhuma movimentação registrada.</div>
+                            ) : (
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Tipo</th>
+                                        <th>Quantidade</th>
+                                        <th>Saldo</th>
+                                        <th>Usuário</th>
+                                        <th>Motivo</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                {historico.map((movimentacao) => (
+                                    <tr key={movimentacao.id}>
+                                        <td>{new Date(movimentacao.criado_em).toLocaleString('pt-BR')}</td>
+
+                                        <td>
+                                            <span className={`movement-badge movement-${movimentacao.tipo}`}>{movimentacao.tipo}</span>
+                                        </td>
+
+                                        <td>{Number(movimentacao.quantidade).toLocaleString('pt-BR')}</td>
+
+                                        <td>{Number(movimentacao.estoque_resultante).toLocaleString('pt-BR')}</td>
+
+                                        <td>{movimentacao.usuario_nome || '—'}</td>
+
+                                        <td>{movimentacao.motivo || '—'}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                            )}
+                        </div>
+
+                        <div className="modal-footer">
+                            <button type="button" className="btn-secondary" onClick={fecharHistorico}>Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {modalFornecedorAberto && (
+                <div className="modal-backdrop">
+                    <div className="modal-card modal-card-small">
+                        <div className="modal-header">
+                            <div>
+                                <h2>Novo fornecedor</h2>
+                                <p>  Cadastre um fornecedor para vincular ao produto.</p>
+                            </div>
+
+                            <button type="button" className="modal-close" onClick={fecharModalFornecedor}> × </button>
+                        </div>
+
+                        <form onSubmit={handleCriarFornecedor}>
+                            <div className="modal-body">
+                                <div className="form-field">
+                                    <label>Nome *</label>
+                                    <input name="nome" value={fornecedorForm.nome} onChange={handleFornecedorChange} placeholder="Nome do fornecedor" required/>
+                                </div>
+
+                                <div className="form-field">
+                                    <label>Documento</label>
+                                    <input name="documento" value={fornecedorForm.documento} onChange={handleFornecedorChange} placeholder="CNPJ ou CPF"/>
+                                </div>
+
+                                <div className="form-field">
+                                    <label>Telefone</label>
+                                    <input name="telefone" value={fornecedorForm.telefone} onChange={handleFornecedorChange} placeholder="(00) 00000-0000"/>
+                                </div>
+
+                                <div className="form-field">
+                                    <label>E-mail</label>
+                                    <input type="email" name="email" value={fornecedorForm.email} onChange={handleFornecedorChange} placeholder="fornecedor@empresa.com"/>
+                                </div>
+                            </div>
+
+                            <div className="modal-footer">
+                                <button type="button" className="btn-secondary" onClick={fecharModalFornecedor}>Cancelar</button>
+                                <button type="submit" className="btn-primary" disabled={salvandoFornecedor}>
+                                    {salvandoFornecedor ? 'Salvando...': 'Cadastrar fornecedor'}
+                                </button>
                             </div>
                         </form>
                     </div>
