@@ -1,4 +1,4 @@
-# UPDATES — WareSync
+<img width="1282" height="640" alt="Image" src="https://github.com/user-attachments/assets/8157fd00-e498-4002-a040-b9fd3d5dadf6" />
 
 Este arquivo registra as principais alterações, correções, integrações e melhorias realizadas no projeto **WareSync**.
 

@@ -1,4 +1,4 @@
-# WareSync
+<img width="1282" height="640" alt="Image" src="https://github.com/user-attachments/assets/189dcbb9-dd25-4f92-bb27-299e94fd1999" />
 
 Sistema web de gestão empresarial com foco em **controle de estoque, produtos, vendas, clientes, financeiro e operações relacionadas**, desenvolvido com **React, Node.js, Express, TypeScript, PostgreSQL e Prisma ORM**.
 

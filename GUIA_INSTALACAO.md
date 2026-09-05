@@ -1,4 +1,4 @@
-# Guia de Instalação — WareSync
+<img width="1282" height="640" alt="Image" src="https://github.com/user-attachments/assets/560b7424-7cb4-41ef-a42a-fce3b9877e01" />
 
 Este guia descreve como preparar o ambiente, configurar o PostgreSQL, instalar as dependências, gerar o Prisma Client e executar o frontend e o backend do **WareSync**.
 
