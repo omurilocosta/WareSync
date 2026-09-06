@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { pool } from '../../config/database';
+import { prisma } from '../../config/prisma';
 import { requireAuth } from '../../middlewares/auth.middleware';
 
 export const dashboardRoutes = Router();
@@ -8,63 +8,162 @@ dashboardRoutes.use(requireAuth);
 
 dashboardRoutes.get('/resumo', async (_req: Request, res: Response, next: NextFunction) => {
   try {
+    const agora = new Date();
+
+    const inicioHoje = new Date(
+      Date.UTC(
+        agora.getFullYear(),
+        agora.getMonth(),
+        agora.getDate()
+      )
+    );
+
+    const fimHoje = new Date(inicioHoje);
+    fimHoje.setUTCDate(fimHoje.getUTCDate() + 1);
+
     const [
-      { rows: totalClientes },
-      { rows: totalProdutos },
-      { rows: estoqueBaixo },
-      { rows: valorEstoque },
-      { rows: clientesRecentes },
-      { rows: vendasHoje },
-      { rows: vendasRecentes },
+      clientes,
+      produtos,
+      vendasHoje,
+      vendasRecentes,
     ] = await Promise.all([
-      pool.query('SELECT COUNT(*)::int AS total FROM clientes WHERE ativo = TRUE'),
-      pool.query('SELECT COUNT(*)::int AS total FROM produtos WHERE ativo = TRUE'),
-      pool.query(
-        `SELECT p.id, p.nome, p.sku, p.estoque_atual, p.estoque_minimo, c.nome AS categoria_nome
-         FROM produtos p
-         LEFT JOIN categorias c ON c.id = p.categoria_id
-         WHERE p.ativo = TRUE AND p.estoque_atual <= p.estoque_minimo
-         ORDER BY p.estoque_atual ASC
-         LIMIT 10`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(estoque_atual * preco_custo), 0)::numeric(14,2) AS total
-         FROM produtos WHERE ativo = TRUE`
-      ),
-      pool.query(
-        `SELECT id, nome, email, criado_em FROM clientes
-         WHERE ativo = TRUE ORDER BY criado_em DESC LIMIT 5`
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(total), 0)::numeric(14,2) AS total_vendido,
-                COUNT(*)::int AS quantidade,
-                COALESCE(AVG(total), 0)::numeric(14,2) AS ticket_medio
-         FROM vendas
-         WHERE status = 'finalizada' AND criado_em::date = CURRENT_DATE`
-      ),
-      pool.query(
-        `SELECT v.id, v.total, v.forma_pagamento, v.criado_em, c.nome AS cliente_nome, u.nome AS usuario_nome
-         FROM vendas v
-         LEFT JOIN clientes c ON c.id = v.cliente_id
-         JOIN usuarios u ON u.id = v.usuario_id
-         WHERE v.status = 'finalizada'
-         ORDER BY v.criado_em DESC
-         LIMIT 5`
-      ),
+      prisma.clientes.findMany({
+        where: {
+          ativo: true,
+        },
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          criado_em: true,
+        },
+        orderBy: {
+          criado_em: 'desc',
+        },
+      }),
+
+      prisma.produtos.findMany({
+        where: {
+          ativo: true,
+        },
+        select: {
+          id: true,
+          nome: true,
+          sku: true,
+          estoque_atual: true,
+          estoque_minimo: true,
+          preco_custo: true,
+          categorias: {
+            select: {
+              nome: true,
+            },
+          },
+        },
+      }),
+
+      prisma.vendas.findMany({
+        where: {
+          status: 'finalizada',
+          criado_em: {
+            gte: inicioHoje,
+            lt: fimHoje,
+          },
+        },
+        select: {
+          total: true,
+        },
+      }),
+
+      prisma.vendas.findMany({
+        where: {
+          status: 'finalizada',
+        },
+        take: 5,
+        orderBy: {
+          criado_em: 'desc',
+        },
+        include: {
+          clientes: {
+            select: {
+              nome: true,
+            },
+          },
+          usuarios: {
+            select: {
+              nome: true,
+            },
+          },
+        },
+      }),
     ]);
+
+    const produtosEstoqueBaixo = produtos
+      .filter(
+        produto =>
+          Number(produto.estoque_atual) <= Number(produto.estoque_minimo)
+      )
+      .sort(
+        (a, b) =>
+          Number(a.estoque_atual) - Number(b.estoque_atual)
+      )
+      .slice(0, 10)
+      .map(produto => ({
+        id: produto.id,
+        nome: produto.nome,
+        sku: produto.sku,
+        estoque_atual: Number(produto.estoque_atual),
+        estoque_minimo: Number(produto.estoque_minimo),
+        categoria_nome: produto.categorias?.nome ?? null,
+      }));
+
+    const valorEstoque = produtos.reduce(
+      (total, produto) =>
+        total +
+        Number(produto.estoque_atual) *
+          Number(produto.preco_custo),
+      0
+    );
+
+    const totalVendidoHoje = vendasHoje.reduce(
+      (total, venda) => total + Number(venda.total),
+      0
+    );
+
+    const quantidadeVendasHoje = vendasHoje.length;
+
+    const ticketMedio =
+      quantidadeVendasHoje > 0
+        ? totalVendidoHoje / quantidadeVendasHoje
+        : 0;
+
+    const clientesRecentes = clientes
+      .slice(0, 5)
+      .map(cliente => ({
+        ...cliente,
+        criado_em: cliente.criado_em.toISOString(),
+      }));
+
+    const vendasRecentesFormatadas = vendasRecentes.map(venda => ({
+      id: venda.id,
+      total: Number(venda.total),
+      forma_pagamento: venda.forma_pagamento,
+      criado_em: venda.criado_em.toISOString(),
+      cliente_nome: venda.clientes?.nome ?? null,
+      usuario_nome: venda.usuarios.nome,
+    }));
 
     res.json({
       success: true,
       data: {
-        total_clientes: totalClientes[0].total,
-        total_produtos: totalProdutos[0].total,
-        valor_estoque: valorEstoque[0].total,
-        produtos_estoque_baixo: estoqueBaixo,
+        total_clientes: clientes.length,
+        total_produtos: produtos.length,
+        valor_estoque: valorEstoque,
+        produtos_estoque_baixo: produtosEstoqueBaixo,
         clientes_recentes: clientesRecentes,
-        vendas_hoje: vendasHoje[0].total_vendido,
-        vendas_hoje_qtd: vendasHoje[0].quantidade,
-        ticket_medio: vendasHoje[0].ticket_medio,
-        vendas_recentes: vendasRecentes,
+        vendas_hoje: totalVendidoHoje,
+        vendas_hoje_qtd: quantidadeVendasHoje,
+        ticket_medio: ticketMedio,
+        vendas_recentes: vendasRecentesFormatadas,
       },
     });
   } catch (err) {

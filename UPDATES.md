@@ -1,4 +1,4 @@
-<img width="1282" height="640" alt="Image" src="https://github.com/user-attachments/assets/8157fd00-e498-4002-a040-b9fd3d5dadf6" />
+<img width="1282" height="640" alt="Image" src="https://github.com/user-attachments/assets/8157fd00-e498-4002-a040-b9fd3d5dadf6"/>
 
 Este arquivo registra as principais alterações, correções, integrações e melhorias realizadas no projeto **WareSync**.
 
@@ -853,3 +853,710 @@ Fiscal                                 ⏳
 Relatórios                             ⏳
 Configurações                          ⏳
 ```
+
+---
+
+## Continuação — 06/09/2026
+
+### Caixa — validação final do frontend
+
+A validação pendente registrada anteriormente foi concluída com sucesso.
+
+Fluxo validado pela interface React:
+
+```text
+abrir caixa                ✅
+visualizar saldo           ✅
+registrar suprimento       ✅
+registrar sangria          ✅
+visualizar movimentações   ✅
+fechar caixa               ✅
+```
+
+Com isso, o módulo de Caixa passou a ser considerado concluído de ponta a ponta:
+
+```text
+Backend Prisma             ✅
+API                        ✅
+Frontend React             ✅
+Testes manuais             ✅
+```
+
+---
+
+### Contas a Receber — backend Prisma
+
+O módulo de Contas a Receber foi migrado de consultas SQL manuais com `pg` para Prisma.
+
+Arquivo principal:
+
+```text
+backend/src/modules/financeiro/contas-receber.routes.ts
+```
+
+Operações migradas e validadas:
+
+```text
+listar contas                         ✅
+filtrar por status                    ✅
+criar conta                           ✅
+baixar recebimento                    ✅
+remover conta pendente                ✅
+```
+
+A listagem utiliza a relação com Clientes para retornar `cliente_nome`. Campos `Decimal` são convertidos para `number` e datas são serializadas em ISO.
+
+A baixa utiliza `updateMany()` com a condição `id + status = pendente`, impedindo que um título já recebido seja baixado novamente. A remoção é permitida somente para títulos pendentes.
+
+Rotas validadas:
+
+```text
+GET    /api/contas-receber
+POST   /api/contas-receber
+POST   /api/contas-receber/:id/baixar
+DELETE /api/contas-receber/:id
+```
+
+Também foi validado o filtro por status.
+
+### Contas a Receber — frontend React
+
+Criados:
+
+```text
+frontend/src/services/contasReceberService.js
+frontend/src/pages/ContasReceber.jsx
+```
+
+Rota React:
+
+```text
+/financeiro/receber
+```
+
+Funcionalidades:
+
+```text
+listar recebimentos        ✅
+filtrar por status         ✅
+cadastrar                  ✅
+selecionar cliente         ✅
+baixar                     ✅
+remover pendente           ✅
+```
+
+#### Correção de caminho da API
+
+Foi identificado um erro no service.
+
+Caminho incorreto:
+
+```text
+/financeiro/contas-receber
+```
+
+Caminho correto utilizado pelo `apiFetch`:
+
+```text
+/contas-receber
+```
+
+A rota da página React continua sendo `/financeiro/receber`. Após a correção, o fluxo completo foi validado.
+
+---
+
+### Contas a Pagar — backend Prisma
+
+O módulo de Contas a Pagar foi migrado de `pool.query()` para Prisma.
+
+Arquivo principal:
+
+```text
+backend/src/modules/financeiro/contas-pagar.routes.ts
+```
+
+Operações migradas:
+
+```text
+listar contas              ✅
+filtrar por status         ✅
+criar conta                ✅
+baixar conta               ✅
+remover conta aberta       ✅
+```
+
+Foram adicionadas validações para ID e valor. A baixa altera `aberta → paga` e registra `pago_em`. A exclusão permanece disponível somente para contas abertas.
+
+API validada manualmente com sucesso.
+
+### Contas a Pagar — frontend React
+
+Criados:
+
+```text
+frontend/src/services/contasPagarService.js
+frontend/src/pages/ContasPagar.jsx
+```
+
+Rota:
+
+```text
+/financeiro/pagar
+```
+
+Fluxo validado:
+
+```text
+listar                 ✅
+filtrar                 ✅
+cadastrar               ✅
+baixar                  ✅
+remover conta aberta    ✅
+```
+
+O link do menu lateral foi atualizado para a nova rota React.
+
+---
+
+### Inadimplência — backend Prisma
+
+O módulo de Inadimplência foi migrado para Prisma.
+
+Arquivo principal:
+
+```text
+backend/src/modules/financeiro/inadimplencia.routes.ts
+```
+
+A listagem considera somente títulos com:
+
+```text
+status = pendente
+vencimento < data atual
+```
+
+São retornados `cliente_nome`, `cliente_telefone`, `dias_atraso`, `total_em_atraso` e `quantidade`.
+
+A ação de recebimento altera o título de `pendente` para `recebido` e registra `recebido_em`.
+
+#### Correção — cálculo de dias em atraso
+
+Durante os testes foi identificado um problema de fuso horário:
+
+```text
+Vencimento:           01/09/2026
+Data atual:           06/09/2026
+Resultado incorreto:  6 dias
+Resultado correto:    5 dias
+```
+
+A causa era a conversão de uma data UTC para horário local antes da normalização da data. O cálculo foi ajustado para comparar datas de calendário de forma consistente em UTC.
+
+Também foi garantido que um título com vencimento na data atual não seja classificado como inadimplente.
+
+### Inadimplência — frontend React
+
+Criados:
+
+```text
+frontend/src/services/inadimplenciaService.js
+frontend/src/pages/Inadimplencia.jsx
+```
+
+Rota:
+
+```text
+/financeiro/inadimplencia
+```
+
+Funcionalidades validadas:
+
+```text
+quantidade de títulos em atraso       ✅
+total financeiro em atraso            ✅
+listagem de inadimplentes              ✅
+dias em atraso                         ✅
+cliente e telefone                     ✅
+registrar recebimento                  ✅
+atualização automática                 ✅
+```
+
+O fluxo foi testado criando um título vencido em Contas a Receber e registrando posteriormente seu recebimento.
+
+---
+
+### Fluxo de Caixa — backend Prisma
+
+O módulo de Fluxo de Caixa foi migrado de SQL manual para Prisma.
+
+Arquivo principal:
+
+```text
+backend/src/modules/financeiro/fluxo-caixa.routes.ts
+```
+
+Implementação atual:
+
+```text
+prisma.caixa_movimentacoes.findMany()
+prisma.contas_pagar.aggregate()
+prisma.contas_receber.aggregate()
+```
+
+As consultas independentes são executadas com `Promise.all()`.
+
+O relatório calcula:
+
+```text
+entradas
+saídas
+saldo do período
+lançamentos
+entradas previstas
+saídas previstas
+saldo projetado
+```
+
+Regras:
+
+```text
+entradas = entrada + suprimento
+saídas   = saída + sangria
+saldo_periodo = entradas - saídas
+saldo_projetado = entradas_previstas - saídas_previstas
+```
+
+O tratamento do período utiliza limites de data em UTC para evitar inconsistências de fuso horário.
+
+Rota validada:
+
+```text
+GET /api/financeiro/fluxo-caixa?inicio=AAAA-MM-DD&fim=AAAA-MM-DD
+```
+
+### Fluxo de Caixa — frontend React
+
+Criados:
+
+```text
+frontend/src/services/fluxoCaixaService.js
+frontend/src/pages/FluxoCaixa.jsx
+```
+
+Rota:
+
+```text
+/financeiro/fluxo-caixa
+```
+
+Funcionalidades:
+
+```text
+filtro por período             ✅
+entradas                       ✅
+saídas                         ✅
+saldo do período               ✅
+entradas previstas             ✅
+saídas previstas               ✅
+saldo projetado                ✅
+listagem de lançamentos        ✅
+```
+
+---
+
+### Financeiro — módulo concluído
+
+Com a conclusão das telas anteriores, o bloco Financeiro ficou completo:
+
+```text
+Caixa                 ✅
+Contas a Receber      ✅
+Contas a Pagar        ✅
+Inadimplência         ✅
+Fluxo de Caixa        ✅
+```
+
+Integração atual:
+
+```text
+React
+↓
+Services
+↓
+API Express
+↓
+Prisma ORM
+↓
+PostgreSQL
+```
+
+---
+
+### Relatórios — backend Prisma
+
+O módulo de Relatórios foi migrado para Prisma.
+
+Arquivo principal:
+
+```text
+backend/src/modules/relatorios/relatorios.routes.ts
+```
+
+São disponibilizados três grupos:
+
+```text
+Vendas
+Estoque
+Financeiro
+```
+
+#### Relatório de Vendas
+
+Rota:
+
+```text
+GET /api/relatorios/vendas?inicio=AAAA-MM-DD&fim=AAAA-MM-DD
+```
+
+Retorna:
+
+```text
+resumo geral
+quantidade de vendas
+total vendido
+vendas por dia
+vendas por vendedor
+top 10 produtos
+```
+
+#### Relatório de Estoque
+
+Rota:
+
+```text
+GET /api/relatorios/estoque
+```
+
+Retorna:
+
+```text
+produtos ativos
+estoque atual
+estoque mínimo
+preço de custo
+valor em estoque
+categoria
+produtos sem venda
+valor total do estoque
+```
+
+O valor em estoque é calculado por `estoque_atual × preco_custo`.
+
+#### Relatório Financeiro
+
+Rota:
+
+```text
+GET /api/relatorios/financeiro?inicio=AAAA-MM-DD&fim=AAAA-MM-DD
+```
+
+Retorna:
+
+```text
+receita bruta
+custo dos produtos vendidos
+lucro bruto
+margem
+contas a pagar em aberto
+contas a receber pendentes
+```
+
+Cálculos principais:
+
+```text
+lucro_bruto = receita_bruta - custo_produtos_vendidos
+margem = (lucro_bruto / receita_bruta) × 100
+```
+
+Os três endpoints foram testados com sucesso.
+
+### Relatórios — frontend React
+
+Criados:
+
+```text
+frontend/src/services/relatoriosService.js
+frontend/src/pages/Relatorios.jsx
+```
+
+Rota:
+
+```text
+/relatorios
+```
+
+A página possui abas internas:
+
+```text
+Vendas
+Estoque
+Financeiro
+```
+
+#### Correção — menu lateral
+
+Inicialmente Vendas, Estoque e Financeiro dentro de Relatórios utilizavam a mesma rota `/relatorios`, fazendo com que os três subitens aparecessem ativos simultaneamente.
+
+A estrutura foi simplificada para um único item de navegação:
+
+```text
+Relatórios → /relatorios
+```
+
+As três opções permanecem como abas internas da página. O dropdown de Relatórios foi removido e o item passou a ser um link simples na sidebar.
+
+O fluxo completo foi validado.
+
+---
+
+### Dashboard — migração final para Prisma
+
+O endpoint do Dashboard ainda utilizava consultas SQL manuais e foi migrado para Prisma.
+
+Arquivo:
+
+```text
+backend/src/modules/dashboard/dashboard.routes.ts
+```
+
+Rota:
+
+```text
+GET /api/dashboard/resumo
+```
+
+Dados retornados:
+
+```text
+total de clientes ativos
+total de produtos ativos
+valor total do estoque
+produtos com estoque baixo
+clientes recentes
+vendas de hoje
+quantidade de vendas de hoje
+ticket médio
+vendas recentes
+```
+
+As consultas foram agrupadas com `Promise.all()`.
+
+Regras principais:
+
+```text
+valor do estoque = estoque_atual × preco_custo
+estoque baixo = estoque_atual <= estoque_minimo
+ticket médio = total vendido hoje / quantidade de vendas hoje
+```
+
+O tratamento da data do dia foi mantido de forma consistente para evitar problemas de fuso horário.
+
+#### Dashboard — frontend
+
+O `Dashboard.jsx` já estava preparado para consumir dados reais através de `dashboardService.js`, portanto não foi necessário refazer a tela.
+
+Foi apenas ajustada a dependência do `useEffect` relacionada ao `navigate`.
+
+Situação validada:
+
+```text
+Clientes ativos             ✅
+Produtos ativos             ✅
+Valor do estoque            ✅
+Vendas de hoje              ✅
+Quantidade de vendas        ✅
+Ticket médio                ✅
+Vendas recentes             ✅
+Estoque baixo               ✅
+Clientes recentes           ✅
+```
+
+---
+
+### Padronização visual — Financeiro
+
+Após concluir os módulos funcionais, foi iniciada uma rodada de ajustes de estilização.
+
+#### Contas a Pagar
+
+Foram revisados:
+
+```text
+cabeçalho
+filtro de status
+badges de status
+botões de ação
+hover da tabela
+modal financeiro
+placeholders
+espaçamentos
+```
+
+Classes reaproveitáveis incluem:
+
+```text
+page-title
+page-subtitle
+status-badge
+status-badge--success
+status-badge--warning
+btn-small
+table-actions
+table-muted
+modal-card--financial
+```
+
+Situação:
+
+```text
+Contas a Pagar — estilização revisada ✅
+```
+
+#### Contas a Receber
+
+A mesma padronização foi aplicada em Contas a Receber, reaproveitando o CSS para evitar duplicação.
+
+Situação:
+
+```text
+Contas a Receber — estilização revisada ✅
+```
+
+#### Inadimplência
+
+Foram ajustados cabeçalho, cards de resumo, badge de dias em atraso, destaque do valor, botão Receber e estado vazio.
+
+Novas classes genéricas utilizadas:
+
+```text
+summary-grid
+status-badge--danger
+```
+
+Situação:
+
+```text
+Inadimplência — estilização revisada ✅
+```
+
+#### Fluxo de Caixa
+
+Foram melhorados cabeçalho, filtro de período, cards, projeção financeira, títulos de seção, tipos de lançamento e estado vazio.
+
+Os cards passaram a utilizar:
+
+```text
+summary-card--success
+summary-card--danger
+summary-card--neutral
+```
+
+Situação:
+
+```text
+Fluxo de Caixa — estilização revisada ✅
+```
+
+---
+
+## Situação atual — 06/09/2026
+
+```text
+Frontend React                         ✅
+React Router                           ✅
+Layout compartilhado                   ✅
+Autenticação e sessão                  ✅
+
+Dashboard backend Prisma               ✅
+Dashboard frontend                     ✅
+
+Produtos backend Prisma                ✅
+Produtos frontend React                ✅
+Categorias backend Prisma              ✅
+Categorias frontend                    ✅
+Fornecedores backend Prisma            ✅
+Produto ↔ Fornecedor                   ✅
+
+Clientes backend Prisma                ✅
+Clientes frontend React                ✅
+
+Vendas backend Prisma                  ✅
+Vendas frontend React                  ✅
+Nova Venda                             ✅
+Cancelamento de Venda                  ✅
+
+Caixa                                  ✅
+Contas a Receber                       ✅
+Contas a Pagar                         ✅
+Inadimplência                          ✅
+Fluxo de Caixa                         ✅
+Financeiro completo                    ✅
+
+Relatórios backend Prisma              ✅
+Relatórios frontend React              ✅
+Relatórios — sidebar                   ✅
+
+Estilização Contas a Pagar             ✅
+Estilização Contas a Receber           ✅
+Estilização Inadimplência              ✅
+Estilização Fluxo de Caixa             ✅
+
+Estilização Relatórios                 ⏳
+Fiscal                                 ⏳
+Configurações                          ⏳
+Testes automatizados adicionais        ⏳
+Refatoração geral                      ⏳
+```
+
+---
+
+## Ponto atual da pausa
+
+O desenvolvimento foi pausado durante a rodada de padronização visual.
+
+Últimas páginas revisadas:
+
+```text
+Contas a Pagar
+Contas a Receber
+Inadimplência
+Fluxo de Caixa
+```
+
+Próximo ponto sugerido para retomada:
+
+```text
+Revisar a estilização de Relatorios.jsx
+```
+
+Após concluir a padronização visual, a sequência planejada pode seguir para:
+
+```text
+testes automatizados
+↓
+refatoração
+↓
+revisão de segurança e permissões
+↓
+documentação final da API
+```
+
+---
+
+## Observações adicionadas em 06/09/2026
+
+- As rotas React e as rotas da API não devem ser confundidas. Exemplo: a página `/financeiro/receber` consome a API `/api/contas-receber`.
+- Datas que representam apenas um dia de calendário devem ser tratadas com cuidado para evitar conversões indevidas entre UTC e horário local.
+- Classes visuais genéricas devem ser reaproveitadas entre módulos para reduzir duplicação de CSS.
+- O menu lateral deve utilizar links simples quando várias visões pertencem à mesma página e são controladas por abas internas.
+- Os módulos migrados para Prisma devem evitar a reintrodução de `pool.query()` sem necessidade.

@@ -710,11 +710,11 @@
     margin: 0;
 }
 
-.client-summary-grid {
+.summary-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
 }
 
 .summary-card {
@@ -785,6 +785,129 @@
     margin-top: 24px;
 }
 
+.contas-pagar__filter {
+    width: 220px;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-badge--success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-badge--warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.page-toolbar {
+    margin-bottom: 8px;
+}
+
+.btn-small {
+    padding: 7px 12px;
+    font-size: 0.82rem;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.table-muted {
+    font-size: 0.82rem;
+    color: #94a3b8;
+}
+
+.data-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.data-table td,
+.data-table th {
+    vertical-align: middle;
+}
+
+.modal-card--financial {
+    max-width: 720px;
+}
+
+.modal-card--financial .modal-body {
+    padding-top: 20px;
+}
+
+.modal-card--financial .form-grid {
+    gap: 18px;
+}
+
+.modal-card--financial input,
+.modal-card--financial select {
+    width: 100%;
+}
+
+.modal-card--financial .modal-footer {
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.contas-receber__filter {
+    width: 220px;
+}
+
+.status-badge--danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.fluxo-caixa__filters {
+    display: flex;
+    align-items: end;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.fluxo-caixa__filters .form-field {
+    min-width: 180px;
+}
+
+.summary-card--success {
+    border-left: 4px solid #16a34a;
+}
+
+.summary-card--danger {
+    border-left: 4px solid #dc2626;
+}
+
+.summary-card--neutral {
+    border-left: 4px solid #2563eb;
+}
+
+.section-header {
+    margin-top: 24px;
+    margin-bottom: 12px;
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
 @media (max-width: 900px) {
     .cash-actions {
         grid-template-columns: 1fr;
@@ -798,13 +921,13 @@
 }
 
 @media (max-width: 900px) {
-    .client-summary-grid {
+    .summary-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (max-width: 600px) {
-    .client-summary-grid {
+    .summary-grid {
         grid-template-columns: 1fr;
     }
 }

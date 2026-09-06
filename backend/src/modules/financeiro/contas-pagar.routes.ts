@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { pool } from '../../config/database';
+import { prisma } from '../../config/prisma';
 import { AppError } from '../../middlewares/error.middleware';
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware';
 
@@ -11,11 +11,20 @@ contasPagarRoutes.get('/', async (req: Request, res: Response, next: NextFunctio
   try {
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
 
-    const { rows } = status
-      ? await pool.query('SELECT * FROM contas_pagar WHERE status = $1 ORDER BY vencimento ASC', [status])
-      : await pool.query('SELECT * FROM contas_pagar ORDER BY vencimento ASC');
+    const contas = await prisma.contas_pagar.findMany({
+      where: status ? { status } : undefined,
+      orderBy: { vencimento: 'asc' },
+    });
 
-    res.json({ success: true, data: rows });
+    const dados = contas.map(conta => ({
+      ...conta,
+      valor: Number(conta.valor),
+      vencimento: conta.vencimento.toISOString(),
+      pago_em: conta.pago_em?.toISOString() ?? null,
+      criado_em: conta.criado_em.toISOString(),
+    }));
+
+    res.json({ success: true, data: dados });
   } catch (err) {
     next(err);
   }
@@ -29,13 +38,34 @@ contasPagarRoutes.post('/', async (req: Request, res: Response, next: NextFuncti
       throw new AppError('Descrição, valor e vencimento são obrigatórios.', 422);
     }
 
-    const { rows } = await pool.query(
-      `INSERT INTO contas_pagar (descricao, fornecedor, valor, vencimento, categoria, forma_pagamento)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [descricao, fornecedor || null, valor, vencimento, categoria || null, forma_pagamento || null]
-    );
+    const valorNumerico = Number(valor);
 
-    res.status(201).json({ success: true, message: 'Conta cadastrada.', data: rows[0] });
+    if (valorNumerico <= 0) {
+      throw new AppError('O valor deve ser maior que zero.', 422);
+    }
+
+    const conta = await prisma.contas_pagar.create({
+      data: {
+        descricao: descricao.trim(),
+        fornecedor: fornecedor?.trim() || null,
+        valor: valorNumerico,
+        vencimento: new Date(`${vencimento}T00:00:00`),
+        categoria: categoria?.trim() || null,
+        forma_pagamento: forma_pagamento || null,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Conta cadastrada.',
+      data: {
+        ...conta,
+        valor: Number(conta.valor),
+        vencimento: conta.vencimento.toISOString(),
+        pago_em: conta.pago_em?.toISOString() ?? null,
+        criado_em: conta.criado_em.toISOString(),
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -44,15 +74,33 @@ contasPagarRoutes.post('/', async (req: Request, res: Response, next: NextFuncti
 contasPagarRoutes.post('/:id/baixar', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
-    const { rows } = await pool.query(
-      `UPDATE contas_pagar SET status = 'paga', pago_em = NOW()
-       WHERE id = $1 AND status = 'aberta' RETURNING *`,
-      [id]
-    );
 
-    if (!rows[0]) throw new AppError('Conta não encontrada ou já está paga.', 422);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new AppError('ID inválido.', 422);
+    }
 
-    res.json({ success: true, message: 'Conta baixada com sucesso.', data: rows[0] });
+    const resultado = await prisma.contas_pagar.updateMany({
+      where: { id, status: 'aberta' },
+      data: { status: 'paga', pago_em: new Date() },
+    });
+
+    if (resultado.count === 0) {
+      throw new AppError('Conta não encontrada ou já está paga.', 422);
+    }
+
+    const conta = await prisma.contas_pagar.findUnique({ where: { id } });
+
+    res.json({
+      success: true,
+      message: 'Conta baixada com sucesso.',
+      data: conta ? {
+        ...conta,
+        valor: Number(conta.valor),
+        vencimento: conta.vencimento.toISOString(),
+        pago_em: conta.pago_em?.toISOString() ?? null,
+        criado_em: conta.criado_em.toISOString(),
+      } : null,
+    });
   } catch (err) {
     next(err);
   }
@@ -61,7 +109,15 @@ contasPagarRoutes.post('/:id/baixar', async (req: Request, res: Response, next: 
 contasPagarRoutes.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
-    await pool.query('DELETE FROM contas_pagar WHERE id = $1 AND status = $2', [id, 'aberta']);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new AppError('ID inválido.', 422);
+    }
+
+    await prisma.contas_pagar.deleteMany({
+      where: { id, status: 'aberta' },
+    });
+
     res.json({ success: true, message: 'Conta removida.' });
   } catch (err) {
     next(err);

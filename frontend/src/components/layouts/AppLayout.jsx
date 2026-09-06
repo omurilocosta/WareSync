@@ -30,11 +30,11 @@ const MENU = [
         label: 'Financeiro',
         icon: '💰',
         children: [
-            { label: 'Contas a pagar', path: '/financeiro?aba=pagar' },
-            { label: 'Contas a receber', path: '/financeiro?aba=receber' },
+            { label: 'Contas a pagar', path: '/financeiro/contas-pagar' },
+            { label: 'Contas a receber', path: '/financeiro/contas-receber' },
             { label: 'Caixa', path: '/financeiro/caixa' },
-            { label: 'Inadimplência', path: '/financeiro?aba=inadimplencia' },
-            { label: 'Fluxo de caixa', path: '/financeiro?aba=fluxo' },
+            { label: 'Inadimplência', path: '/financeiro/inadimplencia' },
+            { label: 'Fluxo de caixa', path: '/financeiro/fluxo-caixa' },
         ],
     },
     {
@@ -54,11 +54,7 @@ const MENU = [
     {
         label: 'Relatórios',
         icon: '📈',
-        children: [
-            { label: 'Vendas', path: '/relatorios?aba=vendas' },
-            { label: 'Estoque', path: '/relatorios?aba=estoque' },
-            { label: 'Financeiro', path: '/relatorios?aba=financeiro' },
-        ],
+        path: '/relatorios',
     },
     {
         label: 'Configurações',

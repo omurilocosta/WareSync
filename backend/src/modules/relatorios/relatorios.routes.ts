@@ -1,52 +1,169 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { pool } from '../../config/database';
+import { prisma } from '../../config/prisma';
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware';
 
 export const relatoriosRoutes = Router();
+
+function obterPeriodo(req: Request) {
+  const hoje = new Date();
+
+  const inicioPadrao = new Date(hoje);
+  inicioPadrao.setDate(inicioPadrao.getDate() - 30);
+
+  const inicio =
+    typeof req.query.inicio === 'string'
+      ? req.query.inicio
+      : inicioPadrao.toISOString().slice(0, 10);
+
+  const fim =
+    typeof req.query.fim === 'string'
+      ? req.query.fim
+      : hoje.toISOString().slice(0, 10);
+
+  const inicioData = new Date(`${inicio}T00:00:00.000Z`);
+
+  const fimData = new Date(`${fim}T00:00:00.000Z`);
+  fimData.setUTCDate(fimData.getUTCDate() + 1);
+
+  return {inicio,fim,inicioData,fimData,};
+}
 
 relatoriosRoutes.use(requireAuth, requireRole('administrador', 'gestor'));
 
 // GET /api/relatorios/vendas?inicio=2026-08-01&fim=2026-08-31
 relatoriosRoutes.get('/vendas', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const inicio = (req.query.inicio as string) || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    const fim = (req.query.fim as string) || new Date().toISOString().slice(0, 10);
+    const { inicio, fim, inicioData, fimData } = obterPeriodo(req);
 
-    const { rows: porDia } = await pool.query(
-      `SELECT criado_em::date AS dia, COUNT(*)::int AS quantidade, COALESCE(SUM(total), 0)::numeric(14,2) AS total
-       FROM vendas
-       WHERE status = 'finalizada' AND criado_em::date BETWEEN $1 AND $2
-       GROUP BY criado_em::date ORDER BY dia ASC`,
-      [inicio, fim]
-    );
+    const vendas = await prisma.vendas.findMany({
+      where: {
+        status: 'finalizada',
+        criado_em: {
+          gte: inicioData,
+          lt: fimData,
+        },
+      },
+      include: {
+        usuarios: {
+          select: {
+            nome: true,
+          },
+        },
+        venda_itens: {
+          include: {
+            produtos: {
+              select: {
+                nome: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        criado_em: 'asc',
+      },
+    });
 
-    const { rows: porVendedor } = await pool.query(
-      `SELECT u.nome AS vendedor, COUNT(*)::int AS quantidade, COALESCE(SUM(v.total), 0)::numeric(14,2) AS total
-       FROM vendas v JOIN usuarios u ON u.id = v.usuario_id
-       WHERE v.status = 'finalizada' AND v.criado_em::date BETWEEN $1 AND $2
-       GROUP BY u.nome ORDER BY total DESC`,
-      [inicio, fim]
-    );
+    const porDiaMap = new Map<
+      string,
+      {
+        dia: string;
+        quantidade: number;
+        total: number;
+      }
+    >();
 
-    const { rows: porProduto } = await pool.query(
-      `SELECT p.nome AS produto, SUM(vi.quantidade)::numeric(14,3) AS quantidade, SUM(vi.subtotal)::numeric(14,2) AS total
-       FROM venda_itens vi
-       JOIN vendas v ON v.id = vi.venda_id
-       JOIN produtos p ON p.id = vi.produto_id
-       WHERE v.status = 'finalizada' AND v.criado_em::date BETWEEN $1 AND $2
-       GROUP BY p.nome ORDER BY total DESC LIMIT 10`,
-      [inicio, fim]
-    );
+    const porVendedorMap = new Map<
+      string,
+      {
+        vendedor: string;
+        quantidade: number;
+        total: number;
+      }
+    >();
 
-    const { rows: totalGeral } = await pool.query(
-      `SELECT COUNT(*)::int AS quantidade, COALESCE(SUM(total), 0)::numeric(14,2) AS total
-       FROM vendas WHERE status = 'finalizada' AND criado_em::date BETWEEN $1 AND $2`,
-      [inicio, fim]
+    const porProdutoMap = new Map<
+      string,
+      {
+        produto: string;
+        quantidade: number;
+        total: number;
+      }
+    >();
+
+    for (const venda of vendas) {
+      const dia = venda.criado_em.toISOString().slice(0, 10);
+      const totalVenda = Number(venda.total);
+
+      const registroDia = porDiaMap.get(dia) || {
+        dia,
+        quantidade: 0,
+        total: 0,
+      };
+
+      registroDia.quantidade += 1;
+      registroDia.total += totalVenda;
+
+      porDiaMap.set(dia, registroDia);
+
+      const vendedor = venda.usuarios?.nome || 'Sem vendedor';
+
+      const registroVendedor = porVendedorMap.get(vendedor) || {
+        vendedor,
+        quantidade: 0,
+        total: 0,
+      };
+
+      registroVendedor.quantidade += 1;
+      registroVendedor.total += totalVenda;
+
+      porVendedorMap.set(vendedor, registroVendedor);
+
+      for (const item of venda.venda_itens) {
+        const produto = item.produtos.nome;
+
+        const registroProduto = porProdutoMap.get(produto) || {
+          produto,
+          quantidade: 0,
+          total: 0,
+        };
+
+        registroProduto.quantidade += Number(item.quantidade);
+        registroProduto.total += Number(item.subtotal);
+
+        porProdutoMap.set(produto, registroProduto);
+      }
+    }
+
+    const porDia = Array.from(porDiaMap.values());
+
+    const porVendedor = Array.from(porVendedorMap.values())
+      .sort((a, b) => b.total - a.total);
+
+    const porProduto = Array.from(porProdutoMap.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+
+    const totalGeral = vendas.reduce(
+      (acc, venda) => acc + Number(venda.total),
+      0
     );
 
     res.json({
       success: true,
-      data: { periodo: { inicio, fim }, resumo: totalGeral[0], por_dia: porDia, por_vendedor: porVendedor, por_produto: porProduto },
+      data: {
+        periodo: {
+          inicio,
+          fim,
+        },
+        resumo: {
+          quantidade: vendas.length,
+          total: totalGeral,
+        },
+        por_dia: porDia,
+        por_vendedor: porVendedor,
+        por_produto: porProduto,
+      },
     });
   } catch (err) {
     next(err);
@@ -56,80 +173,183 @@ relatoriosRoutes.get('/vendas', async (req: Request, res: Response, next: NextFu
 // GET /api/relatorios/estoque
 relatoriosRoutes.get('/estoque', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const { rows: produtos } = await pool.query(
-      `SELECT p.nome, p.sku, p.estoque_atual, p.estoque_minimo, p.preco_custo,
-              (p.estoque_atual * p.preco_custo)::numeric(14,2) AS valor_em_estoque,
-              c.nome AS categoria_nome
-       FROM produtos p LEFT JOIN categorias c ON c.id = p.categoria_id
-       WHERE p.ativo = TRUE ORDER BY valor_em_estoque DESC`
-    );
+    const [produtosDb, vendasFinalizadas] = await Promise.all([
+      prisma.produtos.findMany({
+        where: {
+          ativo: true,
+        },
+        include: {
+          categorias: {
+            select: {
+              nome: true,
+            },
+          },
+        },
+      }),
 
-    const { rows: semVenda } = await pool.query(
-      `SELECT p.id, p.nome, p.sku FROM produtos p
-       WHERE p.ativo = TRUE AND NOT EXISTS (
-         SELECT 1 FROM venda_itens vi
-         JOIN vendas v ON v.id = vi.venda_id
-         WHERE vi.produto_id = p.id AND v.status = 'finalizada'
-       )
-       ORDER BY p.nome ASC`
-    );
+      prisma.vendas.findMany({
+        where: {
+          status: 'finalizada',
+        },
+        select: {
+          venda_itens: {
+            select: {
+              produto_id: true,
+            },
+          },
+        },
+      }),
+    ]);
 
-    const valorTotal = produtos.reduce((acc, p) => acc + Number(p.valor_em_estoque), 0);
+    const produtosVendidos = new Set<number>();
+
+    for (const venda of vendasFinalizadas) {
+      for (const item of venda.venda_itens) {
+        produtosVendidos.add(item.produto_id);
+      }
+    }
+
+    const produtos = produtosDb
+      .map(produto => {
+        const estoqueAtual = Number(produto.estoque_atual);
+        const precoCusto = Number(produto.preco_custo);
+
+        return {
+          nome: produto.nome,
+          sku: produto.sku,
+          estoque_atual: estoqueAtual,
+          estoque_minimo: Number(produto.estoque_minimo),
+          preco_custo: precoCusto,
+          valor_em_estoque: estoqueAtual * precoCusto,
+          categoria_nome: produto.categorias?.nome ?? null,
+        };
+      })
+      .sort((a, b) => b.valor_em_estoque - a.valor_em_estoque);
+
+    const semVenda = produtosDb
+      .filter(produto => !produtosVendidos.has(produto.id))
+      .map(produto => ({
+        id: produto.id,
+        nome: produto.nome,
+        sku: produto.sku,
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+
+    const valorTotal = produtos.reduce(
+      (acc, produto) => acc + produto.valor_em_estoque,
+      0
+    );
 
     res.json({
       success: true,
-      data: { produtos, produtos_sem_venda: semVenda, valor_total_estoque: valorTotal },
+      data: {
+        produtos,
+        produtos_sem_venda: semVenda,
+        valor_total_estoque: valorTotal,
+      },
     });
   } catch (err) {
     next(err);
   }
 });
-
 // GET /api/relatorios/financeiro?inicio=...&fim=...
 relatoriosRoutes.get('/financeiro', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const inicio = (req.query.inicio as string) || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    const fim = (req.query.fim as string) || new Date().toISOString().slice(0, 10);
+    const { inicio, fim, inicioData, fimData } = obterPeriodo(req);
 
     const [
-      { rows: receitaVendas },
-      { rows: custoVendas },
-      { rows: contasPagarAbertas },
-      { rows: contasReceberPendentes },
+      vendas,
+      contasPagar,
+      contasReceber,
     ] = await Promise.all([
-      pool.query(
-        `SELECT COALESCE(SUM(total), 0)::numeric(14,2) AS total FROM vendas
-         WHERE status = 'finalizada' AND criado_em::date BETWEEN $1 AND $2`,
-        [inicio, fim]
-      ),
-      pool.query(
-        `SELECT COALESCE(SUM(vi.quantidade * p.preco_custo), 0)::numeric(14,2) AS total
-         FROM venda_itens vi
-         JOIN vendas v ON v.id = vi.venda_id
-         JOIN produtos p ON p.id = vi.produto_id
-         WHERE v.status = 'finalizada' AND v.criado_em::date BETWEEN $1 AND $2`,
-        [inicio, fim]
-      ),
-      pool.query(`SELECT COALESCE(SUM(valor), 0)::numeric(14,2) AS total FROM contas_pagar WHERE status = 'aberta'`),
-      pool.query(`SELECT COALESCE(SUM(valor), 0)::numeric(14,2) AS total FROM contas_receber WHERE status = 'pendente'`),
+      prisma.vendas.findMany({
+        where: {
+          status: 'finalizada',
+          criado_em: {
+            gte: inicioData,
+            lt: fimData,
+          },
+        },
+        select: {
+          total: true,
+          venda_itens: {
+            select: {
+              quantidade: true,
+              produtos: {
+                select: {
+                  preco_custo: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+
+      prisma.contas_pagar.aggregate({
+        where: {
+          status: 'aberta',
+        },
+        _sum: {
+          valor: true,
+        },
+      }),
+
+      prisma.contas_receber.aggregate({
+        where: {
+          status: 'pendente',
+        },
+        _sum: {
+          valor: true,
+        },
+      }),
     ]);
 
-    const receita = Number(receitaVendas[0].total);
-    const custo = Number(custoVendas[0].total);
+    const receita = vendas.reduce(
+      (acc, venda) => acc + Number(venda.total),
+      0
+    );
+
+    const custo = vendas.reduce((total, venda) => {
+      const custoVenda = venda.venda_itens.reduce(
+        (acc, item) => {
+          const quantidade = Number(item.quantidade);
+          const precoCusto = Number(item.produtos.preco_custo);
+
+          return acc + quantidade * precoCusto;
+        },
+        0
+      );
+
+      return total + custoVenda;
+    }, 0);
+
     const lucroBruto = receita - custo;
 
     res.json({
       success: true,
       data: {
-        periodo: { inicio, fim },
+        periodo: {
+          inicio,
+          fim,
+        },
+
         dre: {
           receita_bruta: receita,
           custo_produtos_vendidos: custo,
           lucro_bruto: lucroBruto,
-          margem: receita > 0 ? Number(((lucroBruto / receita) * 100).toFixed(1)) : 0,
+          margem:
+            receita > 0
+              ? Number(((lucroBruto / receita) * 100).toFixed(1))
+              : 0,
         },
-        contas_pagar_em_aberto: Number(contasPagarAbertas[0].total),
-        contas_receber_pendentes: Number(contasReceberPendentes[0].total),
+
+        contas_pagar_em_aberto: Number(
+          contasPagar._sum.valor ?? 0
+        ),
+
+        contas_receber_pendentes: Number(
+          contasReceber._sum.valor ?? 0
+        ),
       },
     });
   } catch (err) {

@@ -48,7 +48,7 @@ function Dashboard() {
         }
 
         carregarDashboard();
-    }, []);
+    }, [navigate]);
 
     if (carregando) {
         return (
