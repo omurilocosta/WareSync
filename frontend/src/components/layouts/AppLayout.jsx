@@ -32,7 +32,7 @@ const MENU = [
         children: [
             { label: 'Contas a pagar', path: '/financeiro?aba=pagar' },
             { label: 'Contas a receber', path: '/financeiro?aba=receber' },
-            { label: 'Caixa', path: '/financeiro?aba=caixa' },
+            { label: 'Caixa', path: '/financeiro/caixa' },
             { label: 'Inadimplência', path: '/financeiro?aba=inadimplencia' },
             { label: 'Fluxo de caixa', path: '/financeiro?aba=fluxo' },
         ],

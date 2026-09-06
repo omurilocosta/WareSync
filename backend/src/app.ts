@@ -75,6 +75,7 @@ export function createApp(): Application {
   app.use('/api/categorias', categoriasRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/vendas', vendasRoutes);
+  app.use('/api/caixa', caixaRoutes);
   app.use('/api/financeiro/contas-pagar', contasPagarRoutes);
   app.use('/api/financeiro/contas-receber', contasReceberRoutes);
   app.use('/api/financeiro/caixa', caixaRoutes);
