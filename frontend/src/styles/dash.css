@@ -289,6 +289,18 @@
     font-weight: 600;
     margin: 0 0 18px;
 }
+
+.modal-card--client {
+    max-width: 820px;
+}
+.modal-card--client .form-grid {
+    gap: 18px;
+}
+.modal-card--client input,
+.modal-card--client textarea {
+    width: 100%;
+}
+
 .field {
     margin-bottom: 14px;
 }
@@ -666,6 +678,10 @@
     gap: 8px;
 }
 
+.modal-card--sale {
+  max-width: 850px;
+}
+
 .category-create input {
     flex: 1;
 }
@@ -741,48 +757,138 @@
   margin: 6px 0;
 }
 
-.sale-grid{
-    display:grid;
-    grid-template-columns:1.3fr 1fr;
-    gap:24px;
-    align-items:start
+.sale-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(360px, 0.8fr);
+    gap: 24px;
+    align-items: start;
+}
+.sale-grid > div {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+}
+.sale-grid .form-field {
+    margin-bottom: 16px;
+}
+.sale-grid .form-field input,
+.sale-grid .form-field select {
+    width: 100%;
+}
+.sale-product-search {
+    width: 100%;
+    height: 42px;
+    padding: 0 14px;
+    background: #fff;
+    border: 1px solid #dbe1e8;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #1e293b;
+    outline: none;
+    transition: border-color 0.2s ease,box-shadow 0.2s ease;
+}
+.sale-product-search::placeholder {
+    color: #94a3b8;
+}
+.sale-product-search:focus {
+    border-color: var(--color-primary);
 }
 .sale-totals{
-    margin:20px 0;
-    padding:16px;
-    border:1px solid var(--color-border);
-    border-radius:10px
+    margin-top: 20px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
 }
 .sale-totals p{
-    display:flex;
-    justify-content:space-between;
-    margin:8px 0
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0;
+    padding: 7px 0;
+    color: #475569;
 }
 .sale-total-final{
-    font-size:18px;
-    padding-top:10px;
-    border-top:1px solid var(--color-border)
+    margin-top: 8px !important;
+    padding-top: 12px !important;
+    border-top: 1px solid #cbd5e1;
+    font-size: 1.15rem;
+    color: #0f172a !important;
+}
+.sale-quantity-input {
+    width: 72px;
+    height: 36px;
+    padding: 0 8px;
+    text-align: center;
+    border: 1px solid #dbe1e8;
+    border-radius: 6px;
+    outline: none;
+}
+.sale-quantity-input:focus {
+    border-color: var(--color-primary);
 }
 
 .cash-open-card {
     max-width: 520px;
     padding: 24px;
-    border: 1px solid var(--color-border);
+    background: #fff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+.cash-open-card h2 {
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+.cash-open-card p {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #64748b;
+}
+.cash-open-card form {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.cash-open-card .form-field {
+    flex: 1;
+    min-width: 220px;
 }
 
 .cash-actions {
     display: grid;
-    grid-template-columns: 360px 1fr;
+    grid-template-columns: minmax(280px, 360px) 1fr;
     gap: 24px;
     margin-top: 24px;
     align-items: start;
 }
-
+.cash-actions > form,
+.cash-actions > div {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+.cash-actions h2 {
+    margin-top: 0;
+    margin-bottom: 18px;
+    font-size: 1.05rem;
+}
+.cash-actions form .form-field {
+    margin-bottom: 14px;
+}
+.cash-actions form input,
+.cash-actions form select {
+    width: 100%;
+}
 .cash-footer {
     display: flex;
     justify-content: flex-end;
     margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
 }
 
 .contas-pagar__filter {
@@ -799,12 +905,10 @@
     font-weight: 600;
     text-transform: capitalize;
 }
-
 .status-badge--success {
     background: #dcfce7;
     color: #166534;
 }
-
 .status-badge--warning {
     background: #fef3c7;
     color: #92400e;
@@ -825,20 +929,22 @@
     gap: 8px;
     flex-wrap: wrap;
 }
-
 .table-muted {
     font-size: 0.82rem;
     color: #94a3b8;
 }
 
+.modal-card-small textarea {
+    width: 100%;
+    resize: vertical;
+}
+
 .data-table tbody tr {
     transition: background-color 0.15s ease;
 }
-
 .data-table tbody tr:hover {
     background: #f8fafc;
 }
-
 .data-table td,
 .data-table th {
     vertical-align: middle;
@@ -847,20 +953,16 @@
 .modal-card--financial {
     max-width: 720px;
 }
-
 .modal-card--financial .modal-body {
     padding-top: 20px;
 }
-
 .modal-card--financial .form-grid {
     gap: 18px;
 }
-
 .modal-card--financial input,
 .modal-card--financial select {
     width: 100%;
 }
-
 .modal-card--financial .modal-footer {
     padding-top: 18px;
     border-top: 1px solid #e2e8f0;
@@ -881,7 +983,6 @@
     gap: 16px;
     flex-wrap: wrap;
 }
-
 .fluxo-caixa__filters .form-field {
     min-width: 180px;
 }
@@ -889,51 +990,115 @@
 .summary-card--success {
     border-left: 4px solid #16a34a;
 }
-
 .summary-card--danger {
     border-left: 4px solid #dc2626;
 }
-
 .summary-card--neutral {
     border-left: 4px solid #2563eb;
+}
+.summary-card--warning {
+    border-left: 4px solid #ffc107;
 }
 
 .section-header {
     margin-top: 24px;
     margin-bottom: 12px;
 }
-
 .section-header h2 {
     margin: 0;
     font-size: 1.1rem;
 }
 
-@media (max-width: 900px) {
-    .cash-actions {
-        grid-template-columns: 1fr;
-    }
+.reports-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.reports-tab {
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+.reports-tab:hover {
+    color: #0f172a;
+}
+.reports-tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+.reports-filters {
+    display: flex;
+    align-items: end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.reports-filters .form-field {
+    min-width: 180px;
 }
 
-@media(max-width:900px){
-    .sale-grid{
-        grid-template-columns:1fr
-    }
+.page-toolbar .clientes-search {
+    width: 100%;
+    max-width: 420px;
+    height: 42px;
+    padding: 0 14px;
+    background: #fff;
+    border: 1px solid #dbe1e8;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #1e293b;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.page-toolbar .clientes-search::placeholder {
+    color: #94a3b8;
+}
+.page-toolbar .clientes-search:focus {
+    border-color: var(--color-primary);
 }
 
-@media (max-width: 900px) {
-    .summary-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.page-toolbar.vendas-filters {
+    display: grid;
+    grid-template-columns:minmax(110px, 0.7fr)minmax(170px, 1.2fr)minmax(170px, 1.2fr)minmax(150px, 1fr)minmax(160px, 1fr);
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+.page-toolbar.vendas-filters input,
+.page-toolbar.vendas-filters select {
+    width: 100%;
+    height: 42px;
+    padding: 0 14px;
+    background: #fff;
+    border: 1px solid #dbe1e8;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #1e293b;
+    outline: none;
+    transition:border-color 0.2s ease,box-shadow 0.2s ease;
+}
+.page-toolbar.vendas-filters input::placeholder {
+    color: #94a3b8;
+}
+.page-toolbar.vendas-filters input:focus,
+.page-toolbar.vendas-filters select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.page-toolbar.vendas-filters select {
+    cursor: pointer;
 }
 
 @media (max-width: 600px) {
-    .summary-grid {
+    .page-toolbar.vendas-filters {
         grid-template-columns: 1fr;
     }
-}
-
-@media (max-width: 700px) {
-    .supplier-list {
+    .summary-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -946,10 +1111,37 @@
     .form-field-full {
         grid-column: auto;
     }
+    .supplier-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .cash-actions {
+        grid-template-columns: 1fr;
+    }
+    .sale-grid{
+        grid-template-columns:1fr
+    }
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 @media (max-width: 1000px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
+    }
+    .sale-grid {
+        grid-template-columns: 1fr;
+    }
+    .vendas-filters {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 1100px) {
+    .page-toolbar.vendas-filters {
+        grid-template-columns: repeat(2, minmax(180px, 1fr));
     }
 }

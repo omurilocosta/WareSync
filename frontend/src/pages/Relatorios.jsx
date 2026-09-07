@@ -82,21 +82,21 @@ export default function Relatorios() {
         <div className="page-container">
             <div className="page-header">
                 <div>
-                    <h1>Relatórios</h1>
-                    <p>Acompanhe vendas, estoque e desempenho financeiro.</p>
+                    <h1 className='page-title'>Relatórios</h1>
+                    <p className='page-subtitle'>Acompanhe vendas, estoque e desempenho financeiro.</p>
                 </div>
             </div>
 
-            <div className="page-toolbar">
-                <button type="button"className={aba === 'vendas' ? 'btn-primary' : 'btn-secondary'}onClick={() => setAba('vendas')}>Vendas</button>
+            <div className="reports-tabs">
+                <button type="button" className={`reports-tab ${aba === 'vendas' ? 'active' : ''}`} onClick={() => setAba('vendas')}>Vendas</button>
 
-                <button type="button"className={aba === 'estoque' ? 'btn-primary' : 'btn-secondary'}onClick={() => setAba('estoque')}>Estoque</button>
+                <button type="button"className={`reports-tab ${aba === 'estoque' ? 'active' : ''}`} onClick={() => setAba('estoque')}>Estoque</button>
 
-                <button type="button"className={aba === 'financeiro' ? 'btn-primary' : 'btn-secondary'}onClick={() => setAba('financeiro')}>Financeiro</button>
+                <button type="button"className={`reports-tab ${aba === 'financeiro' ? 'active' : ''}`} onClick={() => setAba('financeiro')}>Financeiro</button>
             </div>
 
             {(aba === 'vendas' || aba === 'financeiro') && (
-                <form className="page-toolbar" onSubmit={handleFiltrar}>
+                <form className="page-toolbar reports-filters" onSubmit={handleFiltrar}>
                     <div className="form-field">
                         <label>Início</label>
                         <input type="date" value={inicio} onChange={e => setInicio(e.target.value)} />
@@ -139,19 +139,19 @@ export default function Relatorios() {
 function RelatorioVendas({ dados }) {
     return (
         <>
-            <div className="client-summary-grid">
-                <div className="summary-card">
+            <div className="summary-grid">
+                <div className="summary-card summary-card--neutral">
                     <span>Quantidade de vendas</span>
                     <strong>{dados.resumo?.quantidade || 0}</strong>
                 </div>
 
-                <div className="summary-card">
-                    <span>Total vendido</span>
+                <div className="summary-card summary-card--success">
+                    <span className='text-right'>Total vendido</span>
                     <strong>{moeda(dados.resumo?.total)}</strong>
                 </div>
             </div>
 
-            <div className="page-header">
+            <div className="section-header">
                 <h2>Vendas por dia</h2>
             </div>
 
@@ -161,7 +161,7 @@ function RelatorioVendas({ dados }) {
                         <tr>
                         <th>Dia</th>
                         <th>Quantidade</th>
-                        <th>Total</th>
+                        <th className='text-right'>Total</th>
                         </tr>
                     </thead>
 
@@ -170,14 +170,14 @@ function RelatorioVendas({ dados }) {
                         <tr key={item.dia}>
                             <td>{item.dia}</td>
                             <td>{item.quantidade}</td>
-                            <td>{moeda(item.total)}</td>
+                            <td className='text-right' style={{ fontWeight: 600 }}>{moeda(item.total)}</td>
                         </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
 
-            <div className="page-header">
+            <div className="section-header">
                 <h2>Por vendedor</h2>
             </div>
 
@@ -187,7 +187,7 @@ function RelatorioVendas({ dados }) {
                         <tr>
                             <th>Vendedor</th>
                             <th>Quantidade</th>
-                            <th>Total</th>
+                            <th className='text-right'>Total</th>
                         </tr>
                     </thead>
 
@@ -196,14 +196,14 @@ function RelatorioVendas({ dados }) {
                         <tr key={item.vendedor}>
                             <td>{item.vendedor}</td>
                             <td>{item.quantidade}</td>
-                            <td>{moeda(item.total)}</td>
+                            <td className='text-right' style={{ fontWeight: 600 }}>{moeda(item.total)}</td>
                         </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
 
-            <div className="page-header">
+            <div className="section-header">
                 <h2>Produtos mais vendidos</h2>
             </div>
 
@@ -213,7 +213,7 @@ function RelatorioVendas({ dados }) {
                         <tr>
                             <th>Produto</th>
                             <th>Quantidade</th>
-                            <th>Total</th>
+                            <th className='text-right'>Total</th>
                         </tr>
                     </thead>
 
@@ -222,7 +222,7 @@ function RelatorioVendas({ dados }) {
                         <tr key={item.produto}>
                             <td>{item.produto}</td>
                             <td>{Number(item.quantidade)}</td>
-                            <td>{moeda(item.total)}</td>
+                            <td className='text-right' style={{ fontWeight: 600 }}>{moeda(item.total)}</td>
                         </tr>
                         ))}
                     </tbody>
@@ -235,19 +235,19 @@ function RelatorioVendas({ dados }) {
 function RelatorioEstoque({ dados }) {
     return (
         <>
-            <div className="client-summary-grid">
-                <div className="summary-card">
+            <div className="summary-grid">
+                <div className="summary-card summary-card--success">
                     <span>Valor total em estoque</span>
                     <strong>{moeda(dados.valor_total_estoque)}</strong>
                 </div>
 
-                <div className="summary-card">
+                <div className="summary-card summary-card--danger">
                     <span>Produtos sem venda</span>
                     <strong>{dados.produtos_sem_venda?.length || 0}</strong>
                 </div>
             </div>
 
-            <div className="page-header">
+            <div className="section-header">
                 <h2>Produtos em estoque</h2>
             </div>
 
@@ -260,8 +260,8 @@ function RelatorioEstoque({ dados }) {
                         <th>Categoria</th>
                         <th>Estoque</th>
                         <th>Mínimo</th>
-                        <th>Custo</th>
-                        <th>Valor em estoque</th>
+                        <th className='text-right'>Custo</th>
+                        <th className='text-right'>Valor em estoque</th>
                         </tr>
                     </thead>
 
@@ -273,15 +273,15 @@ function RelatorioEstoque({ dados }) {
                             <td>{produto.categoria_nome || '—'}</td>
                             <td>{Number(produto.estoque_atual)}</td>
                             <td>{Number(produto.estoque_minimo)}</td>
-                            <td>{moeda(produto.preco_custo)}</td>
-                            <td>{moeda(produto.valor_em_estoque)}</td>
+                            <td className='text-right' style={{ fontWeight: 600 }}>{moeda(produto.preco_custo)}</td>
+                            <td className='text-right' style={{ fontWeight: 600 }}>{moeda(produto.valor_em_estoque)}</td>
                         </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
 
-            <div className="page-header">
+            <div className="section-header">
                 <h2>Produtos sem venda</h2>
             </div>
 
@@ -311,29 +311,29 @@ function RelatorioEstoque({ dados }) {
 function RelatorioFinanceiro({ dados }) {
     return (
         <>
-            <div className="client-summary-grid">
-                <div className="summary-card">
-                <span>Receita bruta</span>
-                <strong>{moeda(dados.dre?.receita_bruta)}</strong>
+            <div className="summary-grid">
+                <div className="summary-card summary-card--success">
+                    <span>Receita bruta</span>
+                    <strong>{moeda(dados.dre?.receita_bruta)}</strong>
                 </div>
 
-                <div className="summary-card">
-                <span>Custo dos produtos</span>
-                <strong>{moeda(dados.dre?.custo_produtos_vendidos)}</strong>
+                <div className="summary-card summary-card--danger">
+                    <span>Custo dos produtos</span>
+                    <strong>{moeda(dados.dre?.custo_produtos_vendidos)}</strong>
                 </div>
 
-                <div className="summary-card">
-                <span>Lucro bruto</span>
-                <strong>{moeda(dados.dre?.lucro_bruto)}</strong>
+                <div className="summary-card summary-card--neutral">
+                    <span>Lucro bruto</span>
+                    <strong>{moeda(dados.dre?.lucro_bruto)}</strong>
                 </div>
 
-                <div className="summary-card">
-                <span>Margem</span>
-                <strong>{Number(dados.dre?.margem || 0).toFixed(1)}%</strong>
+                <div className="summary-card summary-card--warning">
+                    <span>Margem</span>
+                    <strong>{Number(dados.dre?.margem || 0).toFixed(1)}%</strong>
                 </div>
             </div>
 
-            <div className="client-summary-grid">
+            <div className="summary-grid">
                 <div className="summary-card">
                     <span>Contas a pagar em aberto</span>
                     <strong>{moeda(dados.contas_pagar_em_aberto)}</strong>

@@ -192,8 +192,8 @@ export default function Clientes() {
         <div className="page-container">
             <div className="page-header">
                 <div>
-                    <h1>Clientes</h1>
-                    <p>Gerencie os clientes cadastrados no sistema.</p>
+                    <h1 className='page-title'>Clientes</h1>
+                    <p className='page-subtitle'>Gerencie os clientes cadastrados no sistema.</p>
                 </div>
                 <button type="button" className="btn-primary" onClick={() => {setClienteEmEdicao(null);limparFormulario();setErro('');setModalAberto(true)}}>
                     + Novo cliente
@@ -201,8 +201,8 @@ export default function Clientes() {
             </div>
 
             <div className="page-toolbar">
-                <input type="search" placeholder="Buscar por nome, documento ou e-mail..." value={busca}
-                    onChange={(event) => etBusca(event.target.value)}
+                <input className='clientes-search' type="search" placeholder="Buscar por nome, documento ou e-mail..." value={busca}
+                    onChange={(event) => setBusca(event.target.value)}
                 />
             </div>
 
@@ -225,7 +225,7 @@ export default function Clientes() {
                                 <th>Documento</th>
                                 <th>Contato</th>
                                 <th>Cidade</th>
-                                <th>Limite</th>
+                                <th className='text-right'>Limite</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -237,12 +237,32 @@ export default function Clientes() {
                                 <td>{cliente.documento || '—'}</td>
                                 <td><div>{cliente.email || '—'}</div>{cliente.telefone && (<small>{cliente.telefone}</small>)}</td>
                                 <td>{cliente.cidade ? `${cliente.cidade}${cliente.estado ? `/${cliente.estado}` : '' }`  : '—'}</td>
-                                <td>{formatarMoeda(cliente.limite_credito)}</td>
+                                <td className='text-right' style={{ fontWeight: 600 }}>{formatarMoeda(cliente.limite_credito)}</td>
                                 <td>
                                     <div className="table-actions">
-                                        <button type="button" className="btn-icon" onClick={() => abrirDetalhes(cliente)}>Detalhes</button>
-                                        <button type="button" className="btn-icon" onClick={() => abrirEdicao(cliente)}>Editar</button>
-                                        <button type="button" className="btn-icon btn-danger" onClick={() => handleInativarCliente(cliente)}>Inativar</button>
+                                        <button 
+                                            type="button" 
+                                            className="btn-secondary btn-small" 
+                                            onClick={() => abrirDetalhes(cliente)}
+                                        >
+                                            Detalhes
+                                        </button>
+
+                                        <button 
+                                            type="button" 
+                                            className="btn-secondary btn-small" 
+                                            onClick={() => abrirEdicao(cliente)}
+                                        >
+                                            Editar
+                                        </button>
+
+                                        <button 
+                                            type="button" 
+                                            className="btn-danger btn-small" 
+                                            onClick={() => handleInativarCliente(cliente)}
+                                        >
+                                            Inativar
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -254,7 +274,7 @@ export default function Clientes() {
 
             {modalAberto && (
                 <div className="modal-backdrop">
-                    <div className="modal-card">
+                    <div className="modal-card modal-card--client">
                         <div className="modal-header">
                             <div>
                                 <h2>{ clienteEmEdicao ? 'Editar cliente' : 'Novo cliente'}</h2>
@@ -268,12 +288,12 @@ export default function Clientes() {
                                 <div className="form-grid">
                                     <div className="form-field form-field-full">
                                         <label>Nome *</label>
-                                        <input name="nome" value={form.nome} onChange={handleChange} required/>
+                                        <input name="nome" value={form.nome} onChange={handleChange} placeholder="Nome ou razão social" required/>
                                     </div>
 
                                     <div className="form-field">
                                         <label>CPF / CNPJ</label>
-                                        <input name="documento" value={form.documento} onChange={handleChange}/>
+                                        <input name="documento" value={form.documento} onChange={handleChange} placeholder="CPF ou CNPJ" />
                                     </div>
 
                                     <div className="form-field">
@@ -284,7 +304,7 @@ export default function Clientes() {
 
                                     <div className="form-field">
                                         <label>Telefone</label>
-                                        <input name="telefone" value={form.telefone} onChange={handleChange}/>
+                                        <input name="telefone" value={form.telefone} onChange={handleChange} placeholder="(00) 00000-0000"/>
                                     </div>
 
                                     <div className="form-field">
@@ -361,7 +381,7 @@ export default function Clientes() {
                                 <div className="empty-state">Carregando detalhes...</div>
                             ) : clienteDetalhes ? (
                                 <>
-                                    <div className="client-summary-grid">
+                                    <div className="summary-grid">
                                         <div className="summary-card">
                                             <span>Total de compras</span><strong>{clienteDetalhes.total_compras || 0}</strong>
                                         </div>
@@ -371,12 +391,12 @@ export default function Clientes() {
                                             <strong> {formatarMoeda(clienteDetalhes.valor_total_comprado)}</strong>
                                         </div>
 
-                                        <div className="summary-card">
+                                        <div className="summary-card summary-card--danger">
                                             <span>Saldo devedor</span>
                                             <strong>{formatarMoeda(clienteDetalhes.saldo_devedor)}</strong>
                                         </div>
 
-                                        <div className="summary-card">
+                                        <div className="summary-card summary-card--success">
                                             <span>Limite disponível</span>
                                             <strong>{formatarMoeda(clienteDetalhes.limite_disponivel)}</strong>
                                         </div>
@@ -400,7 +420,7 @@ export default function Clientes() {
                                                     <th>Venda</th>
                                                     <th>Data</th>
                                                     <th>Status</th>
-                                                    <th>Total</th>
+                                                    <th className='text-right'>Total</th>
                                                 </tr>
                                             </thead>
 
@@ -410,8 +430,18 @@ export default function Clientes() {
                                                         <tr key={compra.id}>
                                                             <td>#{compra.id}</td>
                                                             <td>{new Date(compra.criado_em).toLocaleString('pt-BR')}</td>
-                                                            <td>{compra.status}</td>
-                                                            <td>{formatarMoeda(compra.total)}</td>
+                                                            <td>
+                                                                <span className={`status-badge ${
+                                                                    compra.status === 'finalizada' 
+                                                                    ? 'status-badge--success' 
+                                                                    : compra.status === 'cancelada' 
+                                                                        ? 'status-badge--danger' 
+                                                                        : 'status-badge--warning'
+                                                                }`}>
+                                                                    {compra.status}
+                                                                </span>
+                                                            </td>
+                                                            <td className='text-right' style={{ fontWeight: 600 }}>{formatarMoeda(compra.total)}</td>
                                                         </tr>
                                                     )
                                                 )}

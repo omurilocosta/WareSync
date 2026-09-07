@@ -124,8 +124,8 @@ export default function NovaVenda(){
         <div className="page-container">
             <div className="page-header">
                 <div>
-                    <h1>Nova venda</h1>
-                    <p>Selecione os produtos e finalize a venda.</p>
+                    <h1 className='page-title'>Nova venda</h1>
+                    <p className='page-subtitle'>Selecione os produtos e finalize a venda.</p>
                 </div>
                 <button type="button" className="btn-secondary" onClick={()=>navigate('/vendas')}>Voltar</button>
             </div>
@@ -134,9 +134,9 @@ export default function NovaVenda(){
 
             <div className="sale-grid">
                 <div>
-                    <div className="form-field">
+                    <div className="form-field ws-mb-2">
                         <label>Buscar produto</label>
-                        <input value={buscaProduto} onChange={e => setBuscaProduto(e.target.value)} placeholder="Nome ou SKU"/>
+                        <input className='sale-product-search' value={buscaProduto} onChange={e => setBuscaProduto(e.target.value)} placeholder="Nome ou SKU"/>
                     </div>
 
                     <div className="table-wrapper">
@@ -144,7 +144,7 @@ export default function NovaVenda(){
                             <thead>
                                 <tr>
                                     <th>Produto</th>
-                                    <th>Preço</th>
+                                    <th className='text-right'>Preço</th>
                                     <th>Estoque</th>
                                     <th></th>
                                 </tr>
@@ -158,10 +158,10 @@ export default function NovaVenda(){
                                                 <small>{produto.sku||'Sem SKU'}</small>
                                             </div>
                                         </td>
-                                        <td>{moeda(produto.preco_venda)}</td>
+                                        <td className='text-right' style={{ fontWeight: 600 }}>{moeda(produto.preco_venda)}</td>
                                         <td>{produto.estoque_atual}</td>
                                         <td>
-                                            <button type="button" className="btn-icon" onClick={()=>adicionarProduto(produto)}>Adicionar</button>
+                                            <button type="button" className="btn-secondary btn-small" onClick={()=>adicionarProduto(produto)}>Adicionar</button>
                                         </td>
                                     </tr>
                                 )}
@@ -201,7 +201,7 @@ export default function NovaVenda(){
                                 <tr>
                                     <th>Produto</th>
                                     <th>Qtd.</th>
-                                    <th>Subtotal</th>
+                                    <th className='text-right'>Subtotal</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -212,11 +212,11 @@ export default function NovaVenda(){
                                         <td>
                                             <input type="number" min="1" max={Number(item.estoque_atual)} 
                                             value={item.quantidade} onChange={e => alterarQuantidade(item.id,e.target.value)} 
-                                            style={{width:'70px'}}/>
+                                            className='sale-quantity-input'/>
                                         </td>
-                                        <td>{moeda(Number(item.preco_venda)*item.quantidade)}</td>
+                                        <td className='text-right' style={{ fontWeight: 600 }}>{moeda(Number(item.preco_venda)*item.quantidade)}</td>
                                         <td>
-                                            <button type="button" className="btn-icon btn-danger" onClick={()=>removerItem(item.id)}>Remover</button>
+                                            <button type="button" className="btn-danger btn-small" onClick={()=>removerItem(item.id)}>Remover</button>
                                         </td>
                                     </tr>
                                 )}
@@ -236,8 +236,13 @@ export default function NovaVenda(){
                         <p className="sale-total-final">Total <strong>{moeda(total)}</strong></p>
                     </div>
 
-                    <button type="button" className="btn-primary" disabled={salvando||itens.length===0} 
-                    onClick={finalizarVenda}>{salvando?'Finalizando...':'Finalizar venda'}
+                    <button 
+                        type="button" 
+                        className="btn-primary ws-mt-4"
+                        disabled={salvando||itens.length===0} 
+                        onClick={finalizarVenda}
+                    >
+                        {salvando?'Finalizando...':'Finalizar venda'}
                     </button>
                 </div>
             </div>

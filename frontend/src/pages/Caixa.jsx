@@ -111,8 +111,8 @@ export default function Caixa() {
         <div className="page-container">
             <div className="page-header">
                 <div>
-                    <h1>Caixa</h1>
-                    <p>Controle de abertura, saldo e movimentações.</p>
+                    <h1 className='page-title'>Caixa</h1>
+                    <p className='page-subtitle'>Controle de abertura, saldo e movimentações.</p>
                 </div>
             </div>
 
@@ -137,18 +137,18 @@ export default function Caixa() {
                 </div>
             ) : (
                 <>
-                    <div className="client-summary-grid">
+                    <div className="summary-grid">
                         <div className="summary-card">
                             <span>Valor de abertura</span>
                             <strong>{moeda(caixa.valor_abertura)}</strong>
                         </div>
 
-                        <div className="summary-card">
+                        <div className="summary-card summary-card--success">
                             <span>Saldo atual</span>
                             <strong>{moeda(caixa.saldo)}</strong>
                         </div>
 
-                        <div className="summary-card">
+                        <div className="summary-card summary-card--neutral">
                             <span>Status</span>
                             <strong>{caixa.status}</strong>
                         </div>
@@ -193,7 +193,7 @@ export default function Caixa() {
                                                 <th>Data</th>
                                                 <th>Tipo</th>
                                                 <th>Descrição</th>
-                                                <th>Valor</th>
+                                                <th className='text-right'>Valor</th>
                                             </tr>
                                         </thead>
 
@@ -201,22 +201,34 @@ export default function Caixa() {
                                             {caixa.movimentacoes.map(m => (
                                                 <tr key={m.id}>
                                                     <td>{dataHora(m.criado_em)}</td>
-                                                    <td>{m.tipo}</td>
+                                                    <td>
+                                                        <span className={`status-badge ${
+                                                            m.tipo === 'entrada' || m.tipo === 'suprimento' 
+                                                            ? 'status-badge--success'
+                                                            : 'status-badge--danger'
+                                                        }`}
+                                                        >
+                                                            {m.tipo}
+                                                        </span>
+                                                    </td>
                                                     <td>{m.descricao || '—'}</td>
-                                                    <td>{moeda(m.valor)}</td>
+                                                    <td className='text-right' style={{ fontWeight: 600 }}>{moeda(m.valor)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
                             ) : (
-                                <div className="empty-state">Nenhuma movimentação registrada.</div>
+                                <div className="empty-state">
+                                    <strong>Nenhuma movimentação registrada.</strong>
+                                    <p>As movimentações deste caixa aparecerão aqui.</p>
+                                </div>
                             )}
                         </div>
                     </div>
 
                 <div className="cash-footer">
-                    <button type="button" className="btn-danger" disabled={salvando} onClick={handleFecharCaixa}>
+                    <button type="button" className="btn-primary" disabled={salvando} onClick={handleFecharCaixa}>
                         Fechar caixa
                     </button>
                 </div>

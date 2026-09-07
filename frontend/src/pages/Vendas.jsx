@@ -105,11 +105,14 @@ export default function Vendas(){
     return(
         <div className="page-container">
             <div className="page-header">
-                <div><h1>Vendas</h1><p>Consulte e gerencie as vendas realizadas.</p></div>
+                <div>
+                    <h1 className='page-title'>Vendas</h1>
+                    <p className='page-subtitle'>Gerencie vendas e cancelamentos.</p>
+                </div>
                 <button type="button" className="btn-primary" onClick={()=>navigate('/vendas/nova')}>+ Nova venda</button>
             </div>
 
-            <div className="page-toolbar">
+            <div className="page-toolbar vendas-filters">
                 <input name="numero" placeholder="Número" value={filtros.numero} onChange={handleFiltro}/>
                 <input name="cliente" placeholder="Cliente" value={filtros.cliente} onChange={handleFiltro}/>
                 <input name="vendedor" placeholder="Vendedor" value={filtros.vendedor} onChange={handleFiltro}/>
@@ -137,7 +140,7 @@ export default function Vendas(){
                                 <th>Cliente</th>
                                 <th>Vendedor</th>
                                 <th>Pagamento</th>
-                                <th>Total</th>
+                                <th className='text-right'>Total</th>
                                 <th>Status</th>
                                 <th>Ações</th>
                             </tr>
@@ -150,13 +153,23 @@ export default function Vendas(){
                                     <td>{venda.cliente_nome||'Consumidor final'}</td>
                                     <td>{venda.usuario_nome||'—'}</td>
                                     <td>{venda.forma_pagamento||'—'}</td>
-                                    <td>{formatarMoeda(venda.total)}</td>
-                                    <td>{venda.status}</td>
+                                    <td className='text-right' style={{ fontWeight: 600 }}>{formatarMoeda(venda.total)}</td>
+                                    <td>
+                                        <span className={`status-badge ${
+                                            venda.status === 'finalizada' 
+                                                ? 'status-badge--success' 
+                                                : vendas.status === 'cancelada'
+                                                    ? 'status-badge--warning'
+                                                    : 'status-badge--danger'
+                                        }`}>
+                                            {venda.status}
+                                        </span>
+                                    </td>
                                     <td>
                                         <div className="table-actions">
-                                            <button type="button" className="btn-icon" onClick={()=>abrirDetalhes(venda)}>Detalhes</button>
+                                            <button type="button" className="btn-secondary btn-small" onClick={()=>abrirDetalhes(venda)}>Detalhes</button>
                                             {venda.status==='finalizada'&&
-                                                <button type="button" className="btn-icon btn-danger" onClick={() => abrirCancelamento(venda)}>Cancelar</button>
+                                                <button type="button" className="btn-danger btn-small" onClick={() => abrirCancelamento(venda)}>Cancelar</button>
                                             }
                                         </div>
                                     </td>
@@ -169,7 +182,7 @@ export default function Vendas(){
 
             {modalDetalhesAberto&&(
                 <div className="modal-backdrop">
-                    <div className="modal-card">
+                    <div className="modal-card modal-card--sale">
                         <div className="modal-header">
                             <div>
                                 <h2>Venda #{vendaDetalhes?.id||''}
@@ -181,7 +194,7 @@ export default function Vendas(){
                         <div className="modal-body">
                             {carregandoDetalhes?<div className="empty-state">Carregando detalhes...</div>:vendaDetalhes&&(
                                 <>
-                                    <div className="client-summary-grid">
+                                    <div className="summary-grid">
                                         <div className="summary-card">
                                             <span>Cliente</span>
                                             <strong>{vendaDetalhes.cliente_nome||'Consumidor final'}</strong>
@@ -202,7 +215,18 @@ export default function Vendas(){
 
                                     <div className="client-details-info">
                                         <p><strong>Data:</strong> {formatarData(vendaDetalhes.criado_em)}</p>
-                                        <p><strong>Status:</strong> {vendaDetalhes.status}</p>
+                                        <p>
+                                            <strong>Status:</strong> {''}
+                                            <span className={`status-badge ${
+                                                vendaDetalhes.status === 'finalizada' 
+                                                    ? 'status-badge--success' 
+                                                    : vendaDetalhes.status === 'cancelada'
+                                                        ? 'status-badge--danger'
+                                                        : 'status-badge--warning'
+                                            }`}>
+                                                {vendaDetalhes.status}
+                                            </span>
+                                        </p>
                                         <p><strong>Desconto:</strong> {formatarMoeda(vendaDetalhes.desconto)}</p>
                                     </div>
 
@@ -215,8 +239,8 @@ export default function Vendas(){
                                                     <tr>
                                                         <th>Produto</th>
                                                         <th>Quantidade</th>
-                                                        <th>Preço unitário</th>
-                                                        <th>Subtotal</th>
+                                                        <th className='text-right'>Preço unitário</th>
+                                                        <th className='text-right'>Subtotal</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -224,8 +248,8 @@ export default function Vendas(){
                                                         <tr key={item.id}>
                                                             <td>{item.produto_nome||`Produto #${item.produto_id}`}</td>
                                                             <td>{item.quantidade}</td>
-                                                            <td>{formatarMoeda(item.preco_unitario)}</td>
-                                                            <td>{formatarMoeda(item.subtotal)}</td>
+                                                            <td className='text-right' style={{ fontWeight: 600 }}>{formatarMoeda(item.preco_unitario)}</td>
+                                                            <td className='text-right' style={{ fontWeight: 600 }}>{formatarMoeda(item.subtotal)}</td>
                                                         </tr>
                                                     )}
                                                 </tbody>
@@ -259,7 +283,7 @@ export default function Vendas(){
                         
                         <div className="modal-footer">
                             <button type="button" className="btn-secondary" onClick={() => setModalCancelarAberto(false)}>Voltar</button>
-                            <button type="button" className="btn-primary" disabled={cancelando} 
+                            <button type="button" className="btn-danger" disabled={cancelando} 
                                 onClick={confirmarCancelamento}>{
                                     cancelando
                                         ?'Cancelando...'

@@ -1560,3 +1560,248 @@ documentação final da API
 - Classes visuais genéricas devem ser reaproveitadas entre módulos para reduzir duplicação de CSS.
 - O menu lateral deve utilizar links simples quando várias visões pertencem à mesma página e são controladas por abas internas.
 - Os módulos migrados para Prisma devem evitar a reintrodução de `pool.query()` sem necessidade.
+
+---
+
+## Atualização — 06/09/2026 — Padronização visual
+
+Foi concluída uma nova rodada de revisão visual do frontend React, mantendo o padrão visual adotado nas telas financeiras e de relatórios.
+
+### Relatórios
+
+A revisão visual de `Relatorios.jsx` foi concluída.
+
+Principais ajustes:
+
+```text
+cabeçalho padronizado
+abas internas de relatório
+filtros de período
+cards de resumo
+diferenciação visual dos indicadores financeiros
+títulos de seção
+alinhamento de valores monetários
+reaproveitamento de classes genéricas
+```
+
+Situação:
+
+```text
+Relatórios — estilização revisada ✅
+```
+
+### Clientes
+
+A página `Clientes.jsx` foi revisada e padronizada.
+
+Principais ajustes:
+
+```text
+page-title e page-subtitle
+barra de busca estilizada
+botões de ação padronizados
+alinhamento do limite de crédito
+modal de cadastro/edição ampliado
+placeholders nos campos
+summary-grid no modal de detalhes
+destaque visual do saldo devedor e limite disponível
+badges de status no histórico de compras
+```
+
+Também foi corrigido um erro no campo de busca:
+
+```text
+etBusca(...) → setBusca(...)
+```
+
+Situação:
+
+```text
+Clientes — estilização revisada ✅
+```
+
+### Caixa
+
+A página `Caixa.jsx` foi revisada visualmente.
+
+Principais ajustes:
+
+```text
+cabeçalho padronizado
+card de abertura do caixa
+summary-grid
+destaque do saldo atual
+badge de status
+cards para formulário e histórico de movimentações
+layout responsivo
+badges para suprimento e sangria
+alinhamento de valores monetários
+estado vazio melhorado
+área de fechamento do caixa destacada
+```
+
+Situação:
+
+```text
+Caixa — estilização revisada ✅
+```
+
+### Vendas
+
+A página `Vendas.jsx` foi revisada.
+
+Principais ajustes:
+
+```text
+cabeçalho padronizado
+filtros responsivos
+estilização específica dos inputs e select
+badges de status
+alinhamento do total
+botões Detalhes e Cancelar
+modal de detalhes ampliado
+summary-grid
+badges no status da venda
+alinhamento dos valores dos itens
+modal de cancelamento com ação destrutiva destacada
+```
+
+Foi necessário aumentar a especificidade do CSS dos filtros para evitar que regras genéricas de `.page-toolbar` prevalecessem.
+
+Situação:
+
+```text
+Vendas — estilização revisada ✅
+```
+
+### Nova Venda
+
+A página `NovaVenda.jsx` teve sua revisão visual concluída.
+
+Principais ajustes:
+
+```text
+cabeçalho padronizado
+sale-grid em dois painéis
+cards para produtos e resumo da venda
+barra de busca de produtos estilizada
+botão Adicionar padronizado
+alinhamento de preços
+campos Cliente e Forma de pagamento
+botão Remover padronizado
+campo de quantidade
+alinhamento de subtotal
+área de totais destacada
+botão Finalizar venda em largura total
+layout responsivo
+```
+
+Situação:
+
+```text
+Nova Venda — estilização revisada ✅
+```
+
+---
+
+## Situação visual atual — 06/09/2026
+
+```text
+Contas a Pagar      ✅
+Contas a Receber    ✅
+Inadimplência       ✅
+Fluxo de Caixa      ✅
+Relatórios          ✅
+Clientes            ✅
+Caixa               ✅
+Vendas              ✅
+Nova Venda          ✅
+```
+
+---
+
+## Situação geral atual — 06/09/2026
+
+```text
+Frontend React                         ✅
+React Router                           ✅
+Layout compartilhado                   ✅
+Autenticação e sessão                  ✅
+
+Dashboard backend Prisma               ✅
+Dashboard frontend                     ✅
+
+Produtos backend Prisma                ✅
+Produtos frontend React                ✅
+Categorias backend Prisma              ✅
+Categorias frontend                    ✅
+Fornecedores backend Prisma            ✅
+Produto ↔ Fornecedor                   ✅
+
+Clientes backend Prisma                ✅
+Clientes frontend React                ✅
+Clientes — revisão visual              ✅
+
+Vendas backend Prisma                  ✅
+Vendas frontend React                  ✅
+Nova Venda                             ✅
+Cancelamento de Venda                  ✅
+Vendas — revisão visual                ✅
+Nova Venda — revisão visual            ✅
+
+Caixa                                  ✅
+Contas a Receber                       ✅
+Contas a Pagar                         ✅
+Inadimplência                          ✅
+Fluxo de Caixa                         ✅
+Financeiro completo                    ✅
+Padronização visual Financeiro         ✅
+
+Relatórios backend Prisma              ✅
+Relatórios frontend React              ✅
+Relatórios — sidebar                   ✅
+Relatórios — revisão visual            ✅
+
+Fiscal                                 ⏳
+Configurações                          ⏳
+Testes automatizados adicionais        ⏳
+Refatoração geral                      ⏳
+Revisão de segurança e permissões      ⏳
+Documentação final da API              ⏳
+```
+
+---
+
+## Ponto de pausa — fim de 06/09/2026
+
+A sessão foi encerrada após a conclusão da rodada de padronização visual.
+
+Últimas páginas revisadas:
+
+```text
+Relatórios
+Clientes
+Caixa
+Vendas
+Nova Venda
+```
+
+Próxima etapa sugerida para retomada:
+
+```text
+refatoração geral
+↓
+testes automatizados
+↓
+revisão de segurança e permissões
+↓
+documentação final da API
+```
+
+Pontos técnicos já identificados para a próxima rodada de refatoração:
+
+- revisar possíveis usos restantes de `pool.query()` / SQL manual no backend;
+- revisar o fallback `req.session.usuarioId || 1` no fluxo de Vendas e exigir o usuário autenticado;
+- reduzir duplicação de CSS transformando estilos recorrentes de busca/filtros em classes genéricas reutilizáveis;
+- revisar componentes React com lógica repetida de carregamento, erro, filtros e modais.
+
