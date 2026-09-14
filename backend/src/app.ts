@@ -16,6 +16,7 @@ import { relatoriosRoutes } from './modules/relatorios/relatorios.routes';
 import { devolucoesRoutes } from './modules/devolucoes/devolucoes.routes';
 import { inventariosRoutes } from './modules/inventarios/inventarios.routes';
 import { fornecedoresRoutes } from './modules/fornecedores/fornecedores.routes';
+import { funcionariosRoutes } from './modules/funcionarios/funcionarios.routes';
 import { transferenciasRoutes } from './modules/transferencias/transferencias.routes';
 import { fiscalRoutes } from './modules/fiscal/fiscal.routes';
 import { estoqueMovimentacoesRoutes } from './modules/estoque/estoque-movimentacoes.routes';
@@ -85,6 +86,7 @@ export function createApp(): Application {
   app.use('/api/devolucoes', devolucoesRoutes);
   app.use('/api/inventarios', inventariosRoutes);
   app.use('/api/fornecedores', fornecedoresRoutes);
+  app.use('/api/funcionarios', funcionariosRoutes);
   app.use('/api/transferencias', transferenciasRoutes);
   app.use('/api/fiscal', fiscalRoutes);
   app.use('/api/estoque/movimentacoes', estoqueMovimentacoesRoutes);

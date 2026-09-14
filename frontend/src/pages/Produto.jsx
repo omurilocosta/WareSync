@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { atualizarProduto, criarProduto, inativarProduto, listarMovimentacoes, listarProdutos, movimentarEstoque} from '../services/produtoService'
 import { criarCategoria, listarCategorias } from '../services/categoriaService';
 import { atualizarFornecedoresDoProduto, criarFornecedor, listarFornecedores,  listarFornecedoresDoProduto } from '../services/fornecedoresService';
+import { useToast } from '../contexts/ToastContext';
+import { formatarDocumento, validarDocumento, formatarTelefone, validarTelefone } from '../utils/documento';
 
 function formatMoeda(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', {
@@ -30,6 +32,7 @@ function StockBadge({ produto }) {
 }
 
 function Produtos() {
+    const toast = useToast();
     const [produtos, setProdutos] = useState([]);
     const [busca, setBusca] = useState('');
 
@@ -84,14 +87,40 @@ function Produtos() {
         documento: '',
         telefone: '',
         email: '',
+        endereco: '',
+        numero: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+        cep: '',
+        observacoes: '',
     });
 
     function handleChange(event) {
         const { name, value } = event.target;
 
+        let novoValor = value;
+
+        if (name === 'telefone') {
+            novoValor = formatarTelefone(value);
+        }
+
+        if (name === 'documento') {
+            novoValor = formatarDocumento(value);
+        }
+
+        if (name === 'cep') {
+            const numeros = value.replace(/\D/g, '').slice(0, 8);
+            novoValor - numeros.replace(/(\d{3})(\d)/, '$1.$2');
+        }
+
+        if (name === 'estado') {
+            novaValor = value.replace(/\D/g, '').slice(0, 2).toUpperCase();
+        }
+
         setForm((anterior) => ({
             ...anterior,
-            [name]: value,
+            [name]: novoValor,
         }));
     }
 
@@ -145,9 +174,11 @@ function Produtos() {
 
             if (produtoEmEdicao) {
                 const response = await atualizarProduto(produtoEmEdicao.id, dados);
+                toast.success('Produto atualizado com sucesso.');
                 produtoSalvo = response.data || produtoEmEdicao;
             } else {
                 const response = await criarProduto(dados);
+                toast.success('Produto criado com sucesso.');
                 produtoSalvo = response.data;
             }
             if (produtoSalvo?.id) {
@@ -270,9 +301,11 @@ function Produtos() {
         try {
             setErro('');
             await inativarProduto(produto.id);
+            toast.success('Produto inativado com sucesso.');
             await carregarProdutos();
         } catch (error) {
             setErro(error.message);
+            toast.error('Não foi possível inativar o produto.');
         }
     }
 
@@ -294,12 +327,14 @@ function Produtos() {
                 quantidade,
                 motivo: movimentacao.motivo.trim() || null,
             })
-
+            toast.success('Movimentação concluída com sucesso.');
             fecharMovimentacao();
 
             await carregarProdutos();
         } catch (error) {
-            setErro(error.message)
+            const mensagem = error?.message || 'Não foi possível realizar a movimentação.';
+            setErro(mensagem);
+            toast.error(mensagem);
         }
     }
 
@@ -365,12 +400,60 @@ function Produtos() {
             documento: '',
             telefone: '',
             email: '',
+            endereco: '',
+            numero: '',
+            bairro: '',
+            cidade: '',
+            estado: '',
+            cep: '',
+            observacoes: '',
         });
     }
 
     function fecharModalFornecedor() {
         setModalFornecedorAberto(false);
         limparFornecedorForm();
+    }
+
+    async function buscarCepFornecedor() {
+        const cep = fornecedorForm.cep.replace(/\D/g, '');
+
+        if (!cep) {
+            return;
+        }
+
+        if (cep.length !== 8) {
+            toast.warning('Informe um CEP válido com 8 dígitos.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+
+            if (!response.ok) {
+                throw new Error('Não foi possível consultar o CEP.');
+            }
+
+            const dadosCep = await response.json();
+
+            if (dadosCep.erro) {
+                toast.warning('CEP não encontrado.');
+                return;
+            }
+
+            setFornecedorForm((anterior) => ({
+                ...anterior,
+                cep: dadosCep.cep || anterior.cep,
+                endereco: dadosCep.logradouro || '',
+                bairro: dadosCep.bairro || '',
+                cidade: dadosCep.localidade || '',
+                estado: dadosCep.uf || '',
+            }));
+
+            toast.success('Endereço do fornecedor encontrado.');
+        } catch (error) {
+            toast.error( error?.message || 'Não foi possível consultar o CEP.');
+        }
     }
 
     async function handleCriarFornecedor(event) {
@@ -383,8 +466,32 @@ function Produtos() {
             return;
         }
 
+        if (!fornecedorForm.nome.trim()) {
+            toast.warning('O nome do fornecedor é obrigatório.');
+            return;
+        }
+        if (fornecedorForm.documento.trim() && !validarDocumento(fornecedorForm.documento)) {
+            toast.warning('Informe um CPF ou CNPJ válido.');
+            return;
+        }
+        if (fornecedorForm.telefone.trim() && !validarTelefone(fornecedorForm.telefone)) {
+            toast.warning('Informe um telefone válido com DDD.');
+            return;
+        }
+        if (fornecedorForm.endereco.trim() && !fornecedorForm.numero.trim()) {
+            toast.warning('Informe o número do endereço.');
+            return;
+        }
+
+        const cep = fornecedorForm.cep.replace(/\D/g, '');
+        if (cep.length !== 8) {
+            toast.warning('Informe um CEP válido com 8 dígitos.');
+            return;
+        }
+
         try {
             setSalvandoFornecedor(true);
+            toast.success('Fornecedor criado com sucesso.');
             setErro('');
 
             const response = await criarFornecedor({
@@ -392,6 +499,13 @@ function Produtos() {
                 documento: fornecedorForm.documento.trim() || null,
                 telefone: fornecedorForm.telefone.trim() || null,
                 email: fornecedorForm.email.trim() || null,
+                endereco: fornecedorForm.endereco.trim() || null,
+                numero: fornecedorForm.numero.trim() || null,
+                bairro: fornecedorForm.bairro.trim() || null,
+                cidade: fornecedorForm.cidade.trim() || null,
+                estado: fornecedorForm.estado.trim() || null,
+                cep: fornecedorForm.cep.trim() || null,
+                observacoes: fornecedorForm.observacoes.trim() || null,
             });
 
             const fornecedorCriado = response.data;
@@ -415,7 +529,7 @@ function Produtos() {
 
             fecharModalFornecedor();
         } catch (error) {
-            setErro(error.message);
+            toast.error(error?.message || 'Não foi possível criar o fornecedor.');
         } finally {
             setSalvandoFornecedor(false);
         }
@@ -781,22 +895,63 @@ function Produtos() {
                             <div className="modal-body">
                                 <div className="form-field">
                                     <label>Nome *</label>
-                                    <input name="nome" value={fornecedorForm.nome} onChange={handleFornecedorChange} placeholder="Nome do fornecedor" required/>
+                                    <input name="nome" value={fornecedorForm.nome} onChange={handleFornecedorChange} placeholder="Nome do fornecedor" required />
+                                </div>
+
+                                <div className="form-grid">
+                                    <div className="form-field">
+                                        <label>CPF / CNPJ</label>
+                                        <input name="documento" value={fornecedorForm.documento} onChange={handleFornecedorChange} placeholder="CPF ou CNPJ" maxLength={18} />
+                                    </div>
+
+                                    <div className="form-field">
+                                        <label>Telefone</label>
+                                        <input name="telefone" value={fornecedorForm.telefone} onChange={handleFornecedorChange} placeholder="(00) 00000-0000" maxLength={15} />
+                                    </div>
+
+                                    <div className="form-field">
+                                        <label>E-mail</label>
+                                        <input type="email" name="email" value={fornecedorForm.email} onChange={handleFornecedorChange} placeholder="fornecedor@empresa.com" />
+                                    </div>
+
+                                    <div className="form-field">
+                                        <label>CEP</label>
+
+                                        <div className="cep-field">
+                                            <input name="cep" value={fornecedorForm.cep} onChange={handleFornecedorChange} onBlur={buscarCepFornecedor} placeholder="00000-000" maxLength={9} />
+                                            <button type="button" className="btn-secondary btn-small" onClick={buscarCepFornecedor}>Buscar</button>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-field">
+                                        <label>Endereço</label>
+                                        <input name="endereco" value={fornecedorForm.endereco} onChange={handleFornecedorChange} placeholder="Rua, avenida..." />
+                                    </div>
+
+                                    <div className="form-field">
+                                        <label>Número</label>
+                                        <input name="numero" value={fornecedorForm.numero} onChange={handleFornecedorChange} placeholder="123 ou S/N" maxLength={20} />
+                                    </div>
+
+                                    <div className="form-field">
+                                        <label>Bairro</label>
+                                        <input name="bairro" value={fornecedorForm.bairro} onChange={handleFornecedorChange} placeholder="Bairro" />
+                                    </div>
+
+                                    <div className="form-field">
+                                        <label>Cidade</label>
+                                        <input name="cidade" value={fornecedorForm.cidade} onChange={handleFornecedorChange} placeholder="Cidade" />
+                                    </div>
+
+                                    <div className="form-field">
+                                        <label>Estado</label>
+                                        <input name="estado" value={fornecedorForm.estado} onChange={handleFornecedorChange} placeholder="UF" maxLength={2} />
+                                    </div>
                                 </div>
 
                                 <div className="form-field">
-                                    <label>Documento</label>
-                                    <input name="documento" value={fornecedorForm.documento} onChange={handleFornecedorChange} placeholder="CNPJ ou CPF"/>
-                                </div>
-
-                                <div className="form-field">
-                                    <label>Telefone</label>
-                                    <input name="telefone" value={fornecedorForm.telefone} onChange={handleFornecedorChange} placeholder="(00) 00000-0000"/>
-                                </div>
-
-                                <div className="form-field">
-                                    <label>E-mail</label>
-                                    <input type="email" name="email" value={fornecedorForm.email} onChange={handleFornecedorChange} placeholder="fornecedor@empresa.com"/>
+                                    <label>Observações</label>
+                                    <textarea name="observacoes" value={fornecedorForm.observacoes} onChange={handleFornecedorChange} placeholder="Informações adicionais sobre o fornecedor" rows={3} />
                                 </div>
                             </div>
 

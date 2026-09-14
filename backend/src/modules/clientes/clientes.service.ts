@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma';
 import { AppError } from '../../middlewares/error.middleware';
 import { Cliente, ClienteInput } from './clientes.types';
+import { somenteNumeros, validarDocumento} from '../../utils/documento';
 
 export async function listarClientes(busca?: string): Promise<Cliente[]> {
   const termo = busca?.trim();
@@ -143,17 +144,32 @@ export async function criarCliente(dados: ClienteInput): Promise<Cliente> {
     throw new AppError('O nome do cliente é obrigatório.', 422);  
   }
 
+  const documento = dados.documento ? somenteNumeros(dados.documento) : null;
+  if (documento && !validarDocumento(documento)) {
+    throw new AppError('Informe um CPF ou CNPJ válido.', 400);
+  }
+
+  const telefone = dados.telefone ? somenteNumeros(dados.telefone) : null;
+  if (telefone && telefone.length !== 10 && telefone.length !== 11) {
+    throw new AppError('Informe um telefone válido com DDD.', 400);
+  }
+
+  if (dados.endereco?.trim() && !dados.numero?.trim()) {
+    throw new AppError('Informe o número do endereço.', 400);
+  }
+
   const cliente = await prisma.clientes.create({
     data: {
       nome: dados.nome.trim(),
-      documento: dados.documento || null,
+      documento,
       email: dados.email || null,
-      telefone: dados.telefone || null,
+      telefone,
       endereco: dados.endereco || null,
       numero: dados.numero || null,
       bairro: dados.bairro || null,
       cidade: dados.cidade || null,
       estado: dados.estado || null,
+      cep: dados.cep || null,
       observacoes: dados.observacoes || null,
       limite_credito: dados.limite_credito ?? 0,
     },
@@ -173,19 +189,34 @@ export async function atualizarCliente(id: number, dados: ClienteInput): Promise
     throw new AppError('O nome do cliente é obrigatório.', 422);
   }
 
+  const documento = dados.documento ? somenteNumeros(dados.documento) : null;
+  if (documento && !validarDocumento(documento)) {
+    throw new AppError('Informe um CPF ou CNPJ válido.', 400);
+  }
+
+  const telefone = dados.telefone ? somenteNumeros(dados.telefone) : null;
+  if (telefone && telefone.length !== 10 && telefone.length !== 11) {
+    throw new AppError('Informe um telefone válido com DDD.', 400);
+  }
+
+  if (dados.endereco?.trim() && !dados.numero?.trim()) {
+    throw new AppError('Informe o número do endereço.', 400);
+  }
+
   const cliente = await prisma.clientes.update({
     where: {id},
 
     data: {
       nome: dados.nome.trim(),
-      documento: dados.documento || null,
+      documento,
       email: dados.email || null,
-      telefone: dados.telefone || null,
+      telefone,
       endereco: dados.endereco || null,
       numero: dados.numero || null,
       bairro: dados.bairro || null,
       cidade: dados.cidade || null,
       estado: dados.estado || null,
+      cep: dados.cep || null,
       observacoes: dados.observacoes || null,
       limite_credito: dados.limite_credito ?? 0,
     },

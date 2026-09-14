@@ -137,6 +137,13 @@ export async function criarVenda(usuarioId: number, dados: VendaInput): Promise<
   for (let tentativa = 1; tentativa <= 3; tentativa++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        const sessaoCaixa = await tx.caixa_sessoes.findFirst({
+          where:{status:'aberto'},
+          select:{id:true}
+        });
+        if(!sessaoCaixa) {
+          throw new AppError('Não há caixa aberto. Abra o caixa antes realizar uma venda',409);
+        }
         const venda = await tx.vendas.create({
           data:{
             cliente_id:dados.cliente_id || null,
@@ -228,18 +235,16 @@ export async function criarVenda(usuarioId: number, dados: VendaInput): Promise<
             }
           });
         } else {
-          const sessao = await tx.caixa_sessoes.findFirst({
-            where:{status:'aberto'},
-            select:{id:true}
-          });
-          if (sessao && total > 0) await tx.caixa_movimentacoes.create({
-            data:{
-              caixa_sessao_id:sessao.id,
-              tipo:'entrada',
-              valor:total,
-              descricao:`Venda #${venda.id} (${dados.forma_pagamento || 'pagamento'})`
-            }
-          });
+          if (total > 0) {
+            await tx.caixa_movimentacoes.create({
+              data:{
+                caixa_sessao_id:sessaoCaixa.id,
+                tipo:'entrada',
+                valor:total,
+                descricao:`Venda #${venda.id} (${dados.forma_pagamento || 'pagamento'})`
+              }
+            });
+          }
         }
 
         const vendaFinal = await tx.vendas.update({

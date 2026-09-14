@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { abrirCaixa, buscarCaixaAtual, fecharCaixa, registrarMovimentacao } from '../services/caixaService';
+import { useToast } from '../contexts/ToastContext';
 
 function moeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
@@ -13,6 +14,7 @@ function dataHora(data) {
 }
 
 export default function Caixa() {
+    const toast = useToast();
     const [caixa, setCaixa] = useState(null);
     const [carregando, setCarregando] = useState(true);
     const [erro, setErro] = useState('');
@@ -49,6 +51,7 @@ export default function Caixa() {
             setErro('');
 
             await abrirCaixa(Number(valorAbertura || 0));
+            toast.success('Caixa aberto com sucesso.');
             setValorAbertura('');
             await carregarCaixa();
         } catch (error) {
@@ -62,7 +65,9 @@ export default function Caixa() {
         event.preventDefault();
 
         if (!valor || Number(valor) <= 0) {
-            setErro('Informe um valor maior que zero.');
+            const mensagem = 'Informe um valor maior que zero.';
+            setErro(mensagem);
+            toast.warning(mensagem);
             return;
         }
 
@@ -75,6 +80,7 @@ export default function Caixa() {
                 valor: Number(valor),
                 descricao: descricao.trim() || null,
             });
+            toast.success( tipo === 'suprimento' ? 'Movimentação de suprimento realizada com sucesso.' : 'Movimentação de sangria realizada com sucesso.');
 
             setValor('');
             setDescricao('');
@@ -95,9 +101,12 @@ export default function Caixa() {
             setErro('');
 
             await fecharCaixa();
+            toast.success('Caixa fechado com sucesso.');
             await carregarCaixa();
         } catch (error) {
-            setErro(error.message);
+            const mensagem = error?.message || 'Não foi possível concluir a operação.';
+            setErro(mensagem);
+            toast.error(mensagem);
         } finally {
             setSalvando(false);
         }

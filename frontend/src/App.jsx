@@ -13,6 +13,7 @@ import ContasPagar from './pages/ContasPagar';
 import Inadimplencia from './pages/Inadimplencia';
 import FluxoCaixa from './pages/FluxoCaixa';
 import Relatorios from './pages/Relatorios';
+import VendaFinalizada from './pages/VendaFinalizada';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/clientes" element={<Clientes/>}/>
           <Route path="/vendas" element={<Vendas/>}/>
           <Route path="/vendas/nova" element={<NovaVenda/>}/>
+          <Route path="/vendas/:id/finalizada" element={<VendaFinalizada/>}/>
           <Route path="/financeiro/caixa" element={<Caixa/>}/>
           <Route path="/financeiro/contas-receber" element={<ContasReceber/>}/>
           <Route path="/financeiro/contas-pagar" element={<ContasPagar/>}/>

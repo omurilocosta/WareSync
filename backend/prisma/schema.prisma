@@ -51,6 +51,7 @@ model clientes {
   limite_credito Decimal?         @default(0) @db.Decimal(12, 2)
   ativo          Boolean          @default(true)
   criado_em      DateTime         @default(now()) @db.Timestamptz(6)
+  cep            String?          @db.VarChar(9)
   numero         String?          @db.VarChar(20)
   bairro         String?          @db.VarChar(100)
   cidade         String?          @db.VarChar(100)
@@ -148,6 +149,13 @@ model fornecedores {
   documento            String?                @db.VarChar(20)
   telefone             String?                @db.VarChar(20)
   email                String?                @db.VarChar(150)
+  endereco             String?                
+  numero               String?                @db.VarChar(20)
+  bairro               String?                @db.VarChar(100)
+  cidade               String?                @db.VarChar(100)
+  estado               String?                @db.VarChar(2)
+  cep                  String?                @db.VarChar(9)
+  observacoes          String?                
   ativo                Boolean                @default(true)
   criado_em            DateTime               @default(now()) @db.Timestamptz(6)
   produto_fornecedores produto_fornecedores[]
@@ -267,6 +275,17 @@ model usuarios {
   cargo                  String                   @default("vendedor") @db.VarChar(50)
   ativo                  Boolean                  @default(true)
   criado_em              DateTime                 @default(now()) @db.Timestamptz(6)
+  
+  documento              String?                  @db.VarChar(20)
+  telefone               String?                  @db.VarChar(20)
+  endereco               String?                  
+  numero                 String?                  @db.VarChar(20)
+  bairro                 String?                  @db.VarChar(100)
+  cidade                 String?                  @db.VarChar(100)
+  estado                 String?                  @db.VarChar(2)
+  cep                    String?                  @db.VarChar(9)
+  observacoes            String?
+
   caixa_sessoes          caixa_sessoes[]
   devolucoes             devolucoes[]
   documentos_fiscais     documentos_fiscais[]

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {  baixarContaPagar, criarContaPagar, listarContasPagar, removerContaPagar} from '../services/contasPagarService';
+import { useToast } from '../contexts/ToastContext';
 
 function moeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
@@ -13,6 +14,7 @@ function dataBR(data) {
 }
 
 export default function ContasPagar() {
+    const toast = useToast();
     const [contas, setContas] = useState([]);
     const [status, setStatus] = useState('');
     const [erro, setErro] = useState('');
@@ -78,12 +80,15 @@ export default function ContasPagar() {
                 categoria: form.categoria.trim() || null,
                 forma_pagamento: form.forma_pagamento || null,
             });
+            toast.success('Conta a pagar cadastrada com sucesso.');
 
             setModalAberto(false);
             limparFormulario();
             await carregar();
         } catch (error) {
-            setErro(error.message);
+            const mensagem = error?.message || 'Não foi possível concluir a operação.';
+            setErro(mensagem);
+            toast.error(mensagem);
         } finally {
             setSalvando(false);
         }
@@ -95,9 +100,12 @@ export default function ContasPagar() {
         try {
             setErro('');
             await baixarContaPagar(conta.id);
+            toast.success('Conta paga com sucesso.');
             await carregar();
         } catch (error) {
-            setErro(error.message);
+            const mensagem = error?.message || 'Não foi possível concluir a operação.';
+            setErro(mensagem);
+            toast.error(mensagem);
         }
     }
 
@@ -107,9 +115,12 @@ export default function ContasPagar() {
         try {
             setErro('');
             await removerContaPagar(conta.id);
+            toast.success('Conta removida com sucesso.');
             await carregar();
         } catch (error) {
-            setErro(error.message);
+            const mensagem = error?.message || 'Não foi possível concluir a operação.';
+            setErro(mensagem);
+            toast.error(mensagem);
         }
     }
 

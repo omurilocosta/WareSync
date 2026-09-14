@@ -1,6 +1,7 @@
 import { useEffect,useState } from 'react';
 import { buscarVendaPorId, cancelarVenda, listarVendas } from '../services/vendasService';
 import { useNavigate } from 'react-router';
+import { useToast } from '../contexts/ToastContext';
 
 
 function formatarMoeda(valor){
@@ -11,6 +12,7 @@ function formatarData(data){
 }
 
 export default function Vendas(){
+    const toast = useToast();
     const [vendas,setVendas]=useState([]);
     const [carregando,setCarregando]=useState(true);
     const [erro,setErro]=useState('');
@@ -68,7 +70,9 @@ export default function Vendas(){
     }
     async function confirmarCancelamento(){
         if(!motivoCancelamento.trim()){
-            setErro('Informe o motivo do cancelamento.');
+            const mensagem = 'Informe o motivo do cancelamento.';
+            setErro(mensagem);
+            toast.warning(mensagem);
             return;
         }
         try{
@@ -76,6 +80,7 @@ export default function Vendas(){
             setErro('');
             
             await cancelarVenda(vendaCancelar.id,motivoCancelamento.trim());
+            toast.success('Venda cancelada com sucesso.');
 
             setModalCancelarAberto(false);
             setVendaCancelar(null);
@@ -83,7 +88,9 @@ export default function Vendas(){
             
             await carregarVendas();
         } catch (error){
-            setErro(error.message);
+            const mensagem = error?.message || 'Não foi possível cancelar a venda.';
+            setErro(mensagem);
+            toast.error(mensagem);
         } finally {
             setCancelando(false);
         }

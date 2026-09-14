@@ -25,6 +25,7 @@ export interface ClienteInput {
   bairro?: string;
   cidade?: string;
   estado?: string;
+  cep?: string;
   observacoes?: string;
   limite_credito?: number;
 }

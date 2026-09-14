@@ -22,7 +22,6 @@ const MENU = [
         icon: '📦',
         children: [
             { label: 'Produtos', path: '/estoque/produtos' },
-            { label: 'Movimentações', path: '/estoque/movimentacoes' },
             { label: 'Inventário', path: '/estoque/inventario' },
         ],
     },

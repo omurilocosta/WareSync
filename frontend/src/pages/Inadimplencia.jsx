@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { listarInadimplencia, receberTitulo } from '../services/inadimplenciaService';
+import { useToast } from '../contexts/ToastContext';
 
 function moeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
@@ -13,6 +14,7 @@ function dataBR(data) {
 }
 
 export default function Inadimplencia() {
+    const toast = useToast();
     const [dados, setDados] = useState({
         titulos: [],
         total_em_atraso: 0,
@@ -56,11 +58,13 @@ export default function Inadimplencia() {
         try {
             setBaixandoId(titulo.id);
             setErro('');
-
             await receberTitulo(titulo.id);
+            toast.success('Conta recebida com sucesso.');
             await carregar();
         } catch (error) {
-            setErro(error.message);
+            const mensagem = error?.message || 'Não foi possível concluir a operação.';
+            setErro(mensagem);
+            toast.error(mensagem);
         } finally {
             setBaixandoId(null);
         }

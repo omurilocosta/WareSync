@@ -1805,3 +1805,740 @@ Pontos técnicos já identificados para a próxima rodada de refatoração:
 - reduzir duplicação de CSS transformando estilos recorrentes de busca/filtros em classes genéricas reutilizáveis;
 - revisar componentes React com lógica repetida de carregamento, erro, filtros e modais.
 
+
+---
+
+## Atualização — 13/09/2026
+
+### Nova regra de negócio — venda exige caixa aberto
+
+Foi implementada uma nova validação no fluxo de criação de vendas.
+
+Antes de registrar a venda, o backend passou a consultar uma sessão de caixa com status `aberto`.
+
+Regra atual:
+
+```text
+caixa aberto      → venda pode prosseguir
+caixa fechado     → venda bloqueada
+```
+
+Quando não existe caixa aberto, a API retorna erro `409` com mensagem informando que é necessário abrir o caixa antes da venda.
+
+A validação é executada dentro da transação da venda, evitando registrar venda sem sessão financeira correspondente.
+
+No frontend de `NovaVenda.jsx`, o erro de caixa fechado passou a abrir um modal específico, preservando o carrinho e permitindo navegar diretamente para:
+
+```text
+/financeiro/caixa
+```
+
+Fluxo validado:
+
+```text
+caixa fechado
+↓
+tentar finalizar venda
+↓
+venda bloqueada
+↓
+modal informa necessidade de abrir caixa
+↓
+usuário pode ir para Caixa
+```
+
+Situação:
+
+```text
+Venda exige caixa aberto                 ✅
+Carrinho preservado ao bloquear venda    ✅
+Navegação para Caixa                     ✅
+```
+
+---
+
+### Tela de venda finalizada
+
+Após concluir uma venda com sucesso, o frontend deixou de permanecer apenas na tela de criação e passou a redirecionar para uma tela dedicada de conclusão.
+
+Rota criada:
+
+```text
+/vendas/:id/finalizada
+```
+
+Página criada:
+
+```text
+frontend/src/pages/VendaFinalizada.jsx
+```
+
+A página recebe os dados da venda pelo estado de navegação e também consegue consultar a venda por ID quando a página é recarregada.
+
+Foram adicionados:
+
+```text
+resumo da venda                  ✅
+identificação da venda           ✅
+cliente                          ✅
+vendedor                         ✅
+forma de pagamento               ✅
+itens vendidos                   ✅
+subtotal                         ✅
+desconto                         ✅
+total                            ✅
+data                             ✅
+```
+
+Também foi implementada a opção de emissão de comprovante.
+
+Importante:
+
+```text
+COMPROVANTE NÃO FISCAL
+SEM VALIDADE FISCAL
+```
+
+O documento não simula autorização da SEFAZ e não possui protocolo fiscal.
+
+A impressão é aberta em uma nova janela e contém informações básicas da venda, itens, valores e aviso de ausência de validade fiscal.
+
+Situação:
+
+```text
+Tela de venda concluída          ✅
+Recarga por ID                   ✅
+Comprovante não fiscal           ✅
+Aviso de ausência de validade    ✅
+```
+
+---
+
+### Sistema global de Toasts
+
+Foi criado um sistema global de notificações visuais.
+
+Arquivo:
+
+```text
+frontend/src/contexts/ToastContext.jsx
+```
+
+O provider foi registrado na raiz da aplicação.
+
+Tipos disponíveis:
+
+```text
+success
+error
+warning
+info
+```
+
+As notificações possuem:
+
+```text
+fechamento manual
+remoção automática
+animação de entrada
+posicionamento fixo no canto superior direito
+```
+
+O sistema foi integrado aos principais fluxos do WareSync.
+
+Módulos já utilizando toast:
+
+```text
+Nova Venda               ✅
+Clientes                 ✅
+Produtos                 ✅
+Caixa                    ✅
+Contas a Receber         ✅
+Contas a Pagar           ✅
+Inadimplência            ✅
+Vendas                   ✅
+Fornecedor               ✅
+```
+
+Também foi removida a duplicação de mensagens de validação em Clientes.
+
+Antes:
+
+```text
+toast
++
+mensagem de erro no meio da página
+```
+
+Agora, para validações de formulário:
+
+```text
+somente toast
+```
+
+O estado de erro da página deve permanecer reservado principalmente para falhas de carregamento.
+
+---
+
+### Clientes — CEP e endereço
+
+A tabela `clientes` recebeu o campo:
+
+```text
+cep VARCHAR(9)
+```
+
+O model Prisma foi atualizado e o Prisma Client foi regenerado.
+
+O backend de Clientes passou a receber e persistir o campo `cep`.
+
+No frontend, foi adicionada consulta de CEP utilizando ViaCEP.
+
+Fluxo:
+
+```text
+usuário informa CEP
+↓
+consulta ViaCEP
+↓
+logradouro preenchido
+↓
+bairro preenchido
+↓
+cidade preenchida
+↓
+UF preenchida
+```
+
+Também foi criado botão:
+
+```text
+Buscar
+```
+
+e consulta ao sair do campo.
+
+Validações adicionadas:
+
+```text
+CEP deve possuir 8 dígitos
+CEP inexistente gera aviso
+erro de consulta gera toast
+```
+
+Situação:
+
+```text
+Campo CEP                           ✅
+Busca automática                   ✅
+Preenchimento de endereço          ✅
+Toast de sucesso/erro              ✅
+```
+
+---
+
+### Clientes — CPF e CNPJ
+
+Foi criada validação completa de CPF/CNPJ no frontend.
+
+Utilitário:
+
+```text
+frontend/src/utils/documento.js
+```
+
+Funções implementadas:
+
+```text
+somenteNumeros()
+validarCPF()
+validarCNPJ()
+validarDocumento()
+formatarDocumento()
+```
+
+Máscaras suportadas:
+
+```text
+CPF  → 000.000.000-00
+CNPJ → 00.000.000/0000-00
+```
+
+O backend de Clientes também passou a validar o documento.
+
+O valor é normalizado antes de ser persistido:
+
+```text
+CPF/CNPJ armazenado apenas com dígitos
+```
+
+A validação ocorre tanto no cadastro quanto na edição.
+
+Situação:
+
+```text
+CPF frontend             ✅
+CNPJ frontend            ✅
+Máscara                   ✅
+Validação backend         ✅
+Normalização backend      ✅
+```
+
+---
+
+### Clientes — telefone e número do endereço
+
+Foi adicionada máscara de telefone no frontend.
+
+Formatos aceitos:
+
+```text
+(00) 0000-0000
+(00) 00000-0000
+```
+
+A validação aceita telefones com:
+
+```text
+10 dígitos
+11 dígitos
+```
+
+O backend também valida e normaliza o telefone para dígitos.
+
+Regra adicional de endereço:
+
+```text
+endereço preenchido + número vazio → bloqueado
+```
+
+O campo `numero` aceita valores como:
+
+```text
+123
+123A
+S/N
+```
+
+Situação:
+
+```text
+Máscara telefone                    ✅
+Validação telefone frontend         ✅
+Validação telefone backend          ✅
+Número do endereço frontend         ✅
+Número do endereço backend          ✅
+```
+
+---
+
+### Fornecedores — expansão do cadastro
+
+A tabela `fornecedores` foi expandida com:
+
+```text
+endereco
+numero
+bairro
+cidade
+estado
+cep
+observacoes
+```
+
+O model Prisma foi atualizado e o Prisma Client foi regenerado.
+
+O backend de Fornecedores continua concentrado em:
+
+```text
+backend/src/modules/fornecedores/fornecedores.routes.ts
+```
+
+As rotas existentes foram adaptadas para os novos campos.
+
+Validações adicionadas no backend:
+
+```text
+nome obrigatório
+CPF/CNPJ válido
+telefone válido com DDD
+CEP com 8 dígitos
+número obrigatório quando endereço for informado
+```
+
+Também foi reutilizado o utilitário de documento do backend, evitando duplicação de regra.
+
+Situação:
+
+```text
+Cadastro expandido        ✅
+Edição expandida          ✅
+CPF/CNPJ                  ✅
+Telefone                  ✅
+CEP                       ✅
+Endereço                  ✅
+Número                    ✅
+Observações               ✅
+```
+
+---
+
+### Fornecedores — frontend
+
+O `fornecedoresService.js` recebeu suporte explícito para atualização:
+
+```text
+atualizarFornecedor(id, dados)
+```
+
+O cadastro de fornecedor existente no formulário de Produtos foi ampliado com:
+
+```text
+nome
+CPF/CNPJ
+telefone
+e-mail
+CEP
+endereço
+número
+bairro
+cidade
+estado
+observações
+```
+
+Foram adicionadas:
+
+```text
+máscara de CPF/CNPJ
+máscara de telefone
+máscara de CEP
+normalização da UF
+consulta ViaCEP
+validação do documento
+validação do telefone
+validação do número do endereço
+toasts
+```
+
+Situação:
+
+```text
+Cadastro pelo modal em Produtos    ✅
+Máscaras                           ✅
+ViaCEP                             ✅
+Validações                         ✅
+Toasts                             ✅
+```
+
+---
+
+### Cadastros unificados por abas
+
+A página de Clientes começou a ser transformada em uma área mais ampla de cadastros.
+
+Abas criadas:
+
+```text
+Cliente
+Fornecedor
+Funcionário
+```
+
+A aba Cliente mantém o conteúdo já existente.
+
+A aba Fornecedor recebeu:
+
+```text
+busca
+listagem
+documento formatado
+telefone formatado
+botão Novo fornecedor
+botão Editar
+modal de cadastro
+modal de edição
+CEP automático
+validações
+toasts
+```
+
+A listagem usa o módulo existente de Fornecedores e reaproveita as mesmas validações já implementadas no cadastro de Produtos.
+
+Situação:
+
+```text
+Aba Cliente         ✅
+Aba Fornecedor      ✅
+Aba Funcionário     🟡 frontend pendente
+```
+
+---
+
+### Usuários / Funcionários — expansão da tabela
+
+A tabela `usuarios` foi ampliada para também armazenar dados pessoais dos funcionários.
+
+Campos adicionados:
+
+```text
+documento
+telefone
+endereco
+numero
+bairro
+cidade
+estado
+cep
+observacoes
+```
+
+Foram preservados os campos já existentes:
+
+```text
+id
+nome
+email
+senha_hash
+cargo
+ativo
+criado_em
+```
+
+O model `usuarios` no Prisma foi atualizado e o Prisma Client foi regenerado.
+
+A tabela não foi separada em uma nova tabela de funcionários porque os usuários já possuem relações importantes com:
+
+```text
+vendas
+caixa
+movimentações de estoque
+inventários
+devoluções
+documentos fiscais
+transferências
+```
+
+---
+
+### Funcionários — backend
+
+Foi criado:
+
+```text
+backend/src/modules/funcionarios/funcionarios.routes.ts
+```
+
+Rotas implementadas:
+
+```text
+GET    /api/funcionarios
+POST   /api/funcionarios
+PUT    /api/funcionarios/:id
+DELETE /api/funcionarios/:id
+```
+
+As rotas exigem autenticação e funções administrativas/gestoras.
+
+O cadastro suporta:
+
+```text
+nome
+email
+senha
+cargo
+CPF/CNPJ
+telefone
+CEP
+endereço
+número
+bairro
+cidade
+estado
+observações
+```
+
+Regras implementadas:
+
+```text
+nome obrigatório
+e-mail obrigatório
+senha mínima de 6 caracteres
+cargo permitido
+CPF/CNPJ válido
+telefone válido
+CEP válido
+número obrigatório quando houver endereço
+e-mail duplicado bloqueado
+documento duplicado bloqueado
+```
+
+A senha é armazenada utilizando:
+
+```text
+bcrypt.hash(senha, 10)
+```
+
+Esse padrão mantém compatibilidade com a autenticação existente, que utiliza:
+
+```text
+bcrypt.compare()
+```
+
+A API nunca retorna:
+
+```text
+senha_hash
+```
+
+A edição permite:
+
+```text
+senha vazia       → mantém senha atual
+senha preenchida  → gera novo hash
+```
+
+A exclusão é lógica:
+
+```text
+ativo = false
+```
+
+Também foi adicionada proteção contra auto-inativação do usuário autenticado.
+
+Situação:
+
+```text
+Listar funcionários           ✅
+Cadastrar funcionário         ✅
+Editar funcionário            ✅
+Alterar senha opcionalmente   ✅
+Inativar funcionário          ✅
+bcrypt                        ✅
+Hash protegido                ✅
+```
+
+---
+
+### Situação geral atual — 13/09/2026
+
+```text
+Frontend React                               ✅
+React Router                                 ✅
+Layout compartilhado                         ✅
+Autenticação e sessão                        ✅
+
+Dashboard backend Prisma                     ✅
+Dashboard frontend                           ✅
+
+Produtos backend Prisma                      ✅
+Produtos frontend React                      ✅
+Categorias backend Prisma                    ✅
+Categorias frontend                          ✅
+Fornecedores backend Prisma                  ✅
+Fornecedores cadastro expandido              ✅
+Produto ↔ Fornecedor                         ✅
+
+Clientes backend Prisma                      ✅
+Clientes frontend React                      ✅
+Clientes — CPF/CNPJ                          ✅
+Clientes — telefone                          ✅
+Clientes — CEP/ViaCEP                        ✅
+Clientes — endereço/número                   ✅
+
+Cadastros por abas                           ✅
+Aba Cliente                                  ✅
+Aba Fornecedor                               ✅
+Aba Funcionário                              🟡 backend pronto; frontend pendente
+
+Vendas backend Prisma                        ✅
+Vendas frontend React                        ✅
+Venda exige caixa aberto                     ✅
+Tela de venda finalizada                     ✅
+Comprovante não fiscal                       ✅
+Cancelamento de venda                        ✅
+
+Caixa                                        ✅
+Contas a Receber                             ✅
+Contas a Pagar                               ✅
+Inadimplência                                ✅
+Fluxo de Caixa                               ✅
+Financeiro completo                          ✅
+
+Relatórios backend Prisma                    ✅
+Relatórios frontend React                    ✅
+
+Toast global                                 ✅
+Padronização visual principal                ✅
+
+Funcionários — banco/model Prisma            ✅
+Funcionários — backend CRUD                  ✅
+Funcionários — frontend                      ⏳
+
+Dashboard — remover barra de busca           ⏳
+Fiscal demonstrativo / sem validade fiscal   ⏳
+Testes automatizados adicionais              ⏳
+Refatoração geral                            ⏳
+Revisão de segurança e permissões            ⏳
+Documentação final da API                    ⏳
+```
+
+---
+
+### Ponto de pausa — 13/09/2026
+
+O desenvolvimento foi pausado após concluir o backend de Funcionários.
+
+Último ponto confirmado:
+
+```text
+GET    /api/funcionarios       ✅
+POST   /api/funcionarios       ✅
+PUT    /api/funcionarios/:id   ✅
+DELETE /api/funcionarios/:id   ✅
+```
+
+Próximo passo ao retomar:
+
+```text
+criar frontend/src/services/funcionariosService.js
+↓
+integrar listagem na aba Funcionário
+↓
+criar modal Novo funcionário
+↓
+criar edição
+↓
+criar inativação
+↓
+integrar CPF/CNPJ, telefone e CEP
+↓
+validar cargo e senha
+↓
+toasts
+```
+
+Depois disso, a sequência planejada permanece:
+
+```text
+remover barra de busca do Dashboard
+↓
+módulo Fiscal demonstrativo, sem validade fiscal
+↓
+testes automatizados
+↓
+refatoração geral
+↓
+revisão de segurança e permissões
+↓
+documentação final
+```
+
+Observações importantes:
+
+- A solicitação anterior de simplificar Produtos e remover Transferência foi descartada. Produtos, categorias, grupos e transferências permanecem.
+- Documentos fiscais futuros devem ser claramente identificados como demonstrativos e sem validade fiscal enquanto não houver integração fiscal real.
+- Não simular autorização, protocolo ou retorno da SEFAZ.
+- O banco PostgreSQL já existia antes do Prisma; alterações estruturais continuam sendo feitas de forma controlada no banco e refletidas manualmente no `schema.prisma`.
+- Evitar `prisma db push` ou migrações destrutivas sem revisão do impacto no banco existente.
+- Não editar manualmente `src/generated/prisma/`.

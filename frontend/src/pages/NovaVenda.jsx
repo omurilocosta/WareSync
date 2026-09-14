@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router';
 import { listarClientes } from '../services/clientesService';
 import { listarProdutos } from '../services/produtoService';
 import { criarVenda } from '../services/vendasService';
+import { useToast } from '../contexts/ToastContext';
 
 function moeda(valor){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(valor||0));}
 
 export default function NovaVenda(){
-    const navigate=useNavigate();
+    const toast = useToast();
+    const navigate = useNavigate();
     const [clientes,setClientes]=useState([]);
     const [produtos,setProdutos]=useState([]);
     const [clienteId,setClienteId]=useState('');
@@ -17,6 +19,8 @@ export default function NovaVenda(){
     const [buscaProduto,setBuscaProduto]=useState('');
     const [erro,setErro]=useState('');
     const [salvando,setSalvando]=useState(false);
+
+    const [modalCaixaFechado,setModalCaixaFechado] = useState(false);
 
     async function carregarDados(){
         try{setErro('');
@@ -101,9 +105,9 @@ export default function NovaVenda(){
             const response = await criarVenda({
                 cliente_id: clienteId 
                     ? Number(clienteId) 
-                    :null,
+                    : null,
                 forma_pagamento: formaPagamento,
-                desconto: Number(desconto||0),
+                desconto: Number(desconto || 0),
                 itens: itens.map(
                     item => ({
                         produto_id: item.id,
@@ -111,10 +115,20 @@ export default function NovaVenda(){
                     })
                 )
             });
-            navigate(`/vendas`);
-            console.log('Venda criada:',response.data);
+            toast.success('Venda realizada com sucesso.');
+            navigate(`/vendas/${response.data.id}/finalizada`, {
+                state: {venda: response.data}
+            });
         } catch(error) {
-            setErro(error.message);
+            const mensagem = error?.message || error?.error || 'Não foi possível finalizar a venda.';
+            if (mensagem.includes('Não há caixa aberto')) {
+                setModalCaixaFechado(true);
+                setErro('');
+            } else {
+                setErro(mensagem);
+                toast.error(mensagem);
+            }
+            console.error('Erro ao finalizar a venda: ', error);
         } finally { 
             setSalvando(false);
         }
@@ -246,6 +260,35 @@ export default function NovaVenda(){
                     </button>
                 </div>
             </div>
+
+            {modalCaixaFechado && (
+                <div className="modal-backdrop">
+                    <div className="modal-card modal-card-small">
+                        <div className="modal-header">
+                            <div>
+                                <h2>Caixa fechado</h2>
+                                <p>Não é possível realizar uma venda neste momento.</p>
+                            </div>
+
+                            <button type="button"className="modal-close" onClick={() => setModalCaixaFechado(false)}>
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="modal-body">
+                            <div className="cash-closed-warning">
+                                <strong>Abra o caixa antes de finalizar a venda.</strong>
+                                <p>Nenhum produto foi retirado do estoque e a venda não foi registrada.</p>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button type="button" className="btn-secondary"onClick={() => setModalCaixaFechado(false)}>Continuar venda</button>
+                            <button type="button"className="btn-primary"onClick={() => navigate('/financeiro/caixa')}>Ir para o Caixa</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

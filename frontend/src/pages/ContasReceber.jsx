@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { listarClientes } from '../services/clientesService';
 import { baixarContaReceber, criarContaReceber, listarContasReceber, removerContaReceber, } from '../services/contasReceberService';
+import { useToast } from '../contexts/ToastContext';
 
 function moeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
@@ -14,6 +15,7 @@ function dataBR(data) {
 }
 
 export default function ContasReceber() {
+    const toast = useToast();
     const [contas, setContas] = useState([]);
     const [clientes, setClientes] = useState([]);
     const [status, setStatus] = useState('');
@@ -85,12 +87,15 @@ export default function ContasReceber() {
                 categoria: form.categoria.trim() || null,
                 forma_pagamento: form.forma_pagamento || null,
             });
+            toast.success('Conta a receber cadastrada com sucesso.');
 
             setModalAberto(false);
             limparFormulario();
             await carregar();
         } catch (error) {
-            setErro(error.message);
+            const mensagem = error?.message || 'Não foi possível concluir a operação.';
+            setErro(mensagem);
+            toast.error(mensagem);
         } finally {
             setSalvando(false);
         }
@@ -102,9 +107,12 @@ export default function ContasReceber() {
         try {
             setErro('');
             await baixarContaReceber(conta.id);
+            toast.success('Conta recebida com sucesso.');
             await carregar();
         } catch (error) {
-            setErro(error.message);
+            const mensagem = error?.message || 'Não foi possível concluir a operação.';
+            setErro(mensagem);
+            toast.error(mensagem);
         }
     }
 
@@ -114,9 +122,12 @@ export default function ContasReceber() {
         try {
             setErro('');
             await removerContaReceber(conta.id);
+            toast.success('Conta removida com sucesso.');
             await carregar();
         } catch (error) {
-            setErro(error.message);
+            const mensagem = error?.message || 'Não foi possível concluir a operação.';
+            setErro(mensagem);
+            toast.error(mensagem);
         }
     }
 

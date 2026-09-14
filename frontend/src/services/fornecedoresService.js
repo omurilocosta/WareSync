@@ -14,6 +14,13 @@ export function criarFornecedor(dados) {
     });
 }
 
+export function atualizarFornecedor(id, dados) {
+    return apiFetch(`/fornecedores/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(dados),
+    });
+}
+
 export function listarFornecedoresDoProduto(produtoId) {
     return apiFetch(`/fornecedores/produto/${produtoId}`);
 }
