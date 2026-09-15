@@ -3,6 +3,7 @@ import { atualizarCliente, buscarDetalhesCliente, criarCliente, inativarCliente,
 import { useToast } from '../contexts/ToastContext';
 import { formatarDocumento, validarDocumento, formatarTelefone, validarTelefone } from '../utils/documento';
 import { listarFornecedores, criarFornecedor, atualizarFornecedor } from '../services/fornecedoresService';
+import { listarFuncionarios, criarFuncionario, atualizarFuncionario, inativarFuncionario } from '../services/funcionariosService';
 
 function formatarMoeda(valor) {
     return new Intl.NumberFormat('pt-BR', {
@@ -64,6 +65,31 @@ export default function Clientes() {
         cep: '',
         observacoes: '',
     });
+
+    const [funcionarios, setFuncionarios] = useState([]);
+    const [buscaFuncionario, setBuscaFuncionario] = useState('');
+    const [carregandoFuncionarios, setCarregandoFuncionarios] = useState(false);
+
+    const [modalFuncionarioAberto, setModalFuncionarioAberto] = useState(false);
+    const [funcionarioEditando, setFuncionarioEditando] = useState(null);
+
+    const [funcionarioForm, setFuncionarioForm] = useState({
+        nome: '',
+        documento: '',
+        telefone: '',
+        email: '',
+        senha: '',
+        cargo: 'operacional',
+        cep: '',
+        endereco: '',
+        numero: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+        observacoes: '',
+    });
+
+    const [funcionarioParaInativar, setFuncionarioParaInativar] = useState(null);
 
     async function carregarClientes(termo = '') {
         try {
@@ -469,7 +495,301 @@ export default function Clientes() {
         } catch (error) {
             toast.error(error?.message || 'Não foi possível salvar o fornecedor.' );
         }
-}
+    }
+
+    async function carregarFuncionarios() {
+        try {
+            setCarregandoFuncionarios(true);
+
+            const response = await listarFuncionarios(
+                buscaFuncionario
+            );
+
+            setFuncionarios(response.data || []);
+        } catch (error) {
+            toast.error(
+                error?.message ||
+                'Não foi possível carregar os funcionários.'
+            );
+        } finally {
+            setCarregandoFuncionarios(false);
+        }
+    }
+    useEffect(() => {
+        if (abaAtiva === 'funcionario') {
+            carregarFuncionarios();
+        }
+    }, [abaAtiva, buscaFuncionario]);
+    function limparFuncionarioForm() {
+    setFuncionarioForm({
+        nome: '',
+        documento: '',
+        telefone: '',
+        email: '',
+        senha: '',
+        cargo: 'operacional',
+        cep: '',
+        endereco: '',
+        numero: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+        observacoes: '',
+    });
+    }
+    function fecharModalFuncionario() {
+        setModalFuncionarioAberto(false);
+        setFuncionarioEditando(null);
+        limparFuncionarioForm();
+    }
+    async function buscarCepFuncionario() {
+    const cep = funcionarioForm.cep.replace(/\D/g, '');
+
+    if (!cep) {
+        return;
+    }
+
+    if (cep.length !== 8) {
+        toast.warning(
+            'Informe um CEP válido com 8 dígitos.'
+        );
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            `https://viacep.com.br/ws/${cep}/json/`
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                'Não foi possível consultar o CEP.'
+            );
+        }
+
+        const dadosCep = await response.json();
+
+        if (dadosCep.erro) {
+            toast.warning('CEP não encontrado.');
+            return;
+        }
+
+        setFuncionarioForm((anterior) => ({
+            ...anterior,
+            cep: dadosCep.cep || anterior.cep,
+            endereco: dadosCep.logradouro || '',
+            bairro: dadosCep.bairro || '',
+            cidade: dadosCep.localidade || '',
+            estado: dadosCep.uf || '',
+        }));
+
+        toast.success('Endereço encontrado.');
+    } catch (error) {
+        toast.error(
+            error?.message ||
+            'Não foi possível consultar o CEP.'
+        );
+    }
+    }
+    async function handleSalvarFuncionario(event) {
+    event.preventDefault();
+
+    if (!funcionarioForm.nome.trim()) {
+        toast.warning(
+            'O nome do funcionário é obrigatório.'
+        );
+        return;
+    }
+
+    if (!funcionarioForm.email.trim()) {
+        toast.warning(
+            'O e-mail do funcionário é obrigatório.'
+        );
+        return;
+    }
+
+    if (
+        !funcionarioEditando &&
+        funcionarioForm.senha.length < 6
+    ) {
+        toast.warning(
+            'A senha precisa ter pelo menos 6 caracteres.'
+        );
+        return;
+    }
+
+    if (
+        funcionarioEditando &&
+        funcionarioForm.senha &&
+        funcionarioForm.senha.length < 6
+    ) {
+        toast.warning(
+            'A nova senha precisa ter pelo menos 6 caracteres.'
+        );
+        return;
+    }
+
+    if (
+        funcionarioForm.documento.trim() &&
+        !validarDocumento(funcionarioForm.documento)
+    ) {
+        toast.warning(
+            'Informe um CPF ou CNPJ válido.'
+        );
+        return;
+    }
+
+    if (
+        funcionarioForm.telefone.trim() &&
+        !validarTelefone(funcionarioForm.telefone)
+    ) {
+        toast.warning(
+            'Informe um telefone válido com DDD.'
+        );
+        return;
+    }
+
+    if (
+        funcionarioForm.endereco.trim() &&
+        !funcionarioForm.numero.trim()
+    ) {
+        toast.warning(
+            'Informe o número do endereço.'
+        );
+        return;
+    }
+
+    const cepNumeros =
+        funcionarioForm.cep.replace(/\D/g, '');
+
+    if (
+        funcionarioForm.cep.trim() &&
+        cepNumeros.length !== 8
+    ) {
+        toast.warning(
+            'Informe um CEP válido com 8 dígitos.'
+        );
+        return;
+    }
+
+    const dados = {
+        nome: funcionarioForm.nome.trim(),
+        documento:
+            funcionarioForm.documento.trim() || null,
+        telefone:
+            funcionarioForm.telefone.trim() || null,
+        email: funcionarioForm.email.trim(),
+        cargo: funcionarioForm.cargo,
+        cep:
+            funcionarioForm.cep.trim() || null,
+        endereco:
+            funcionarioForm.endereco.trim() || null,
+        numero:
+            funcionarioForm.numero.trim() || null,
+        bairro:
+            funcionarioForm.bairro.trim() || null,
+        cidade:
+            funcionarioForm.cidade.trim() || null,
+        estado:
+            funcionarioForm.estado.trim() || null,
+        observacoes:
+            funcionarioForm.observacoes.trim() || null,
+    };
+
+    if (funcionarioForm.senha) {
+        dados.senha = funcionarioForm.senha;
+    }
+
+    try {
+        if (funcionarioEditando) {
+            await atualizarFuncionario(
+                funcionarioEditando.id,
+                dados
+            );
+
+            toast.success(
+                'Funcionário atualizado com sucesso.'
+            );
+        } else {
+            await criarFuncionario({
+                ...dados,
+                senha: funcionarioForm.senha,
+            });
+
+            toast.success(
+                'Funcionário cadastrado com sucesso.'
+            );
+        }
+
+        fecharModalFuncionario();
+        await carregarFuncionarios();
+    } catch (error) {
+        toast.error(
+            error?.message ||
+            'Não foi possível salvar o funcionário.'
+        );
+    }
+    }
+    function handleFuncionarioChange(event) {
+        const { name, value } = event.target;
+
+        let novoValor = value;
+
+        if (name === 'documento') {
+            novoValor = formatarDocumento(value);
+        }
+
+        if (name === 'telefone') {
+            novoValor = formatarTelefone(value);
+        }
+
+        if (name === 'cep') {
+            const numeros = value
+                .replace(/\D/g, '')
+                .slice(0, 8);
+
+            novoValor = numeros.replace(
+                /^(\d{5})(\d)/,
+                '$1-$2'
+            );
+        }
+
+        if (name === 'estado') {
+            novoValor = value
+                .replace(/[^a-zA-Z]/g, '')
+                .slice(0, 2)
+                .toUpperCase();
+        }
+
+        setFuncionarioForm((anterior) => ({
+            ...anterior,
+            [name]: novoValor,
+        }));
+    }
+    async function handleInativarFuncionario() {
+        if (!funcionarioParaInativar) {
+            return;
+        }
+
+        try {
+            await inativarFuncionario(
+                funcionarioParaInativar.id
+            );
+
+            toast.success(
+                'Funcionário inativado com sucesso.'
+            );
+
+            setFuncionarioParaInativar(null);
+
+            await carregarFuncionarios();
+        } catch (error) {
+            toast.error(
+                error?.message ||
+                'Não foi possível inativar o funcionário.'
+            );
+        }
+    }
 
     return (
         <div className="page-container">
@@ -920,12 +1240,450 @@ export default function Clientes() {
                     )}
                 </>
             )}
-
             {abaAtiva === 'funcionario' && (
-                <div className="empty-state">
-                    <h3>Funcionários</h3>
-                    <p>Cadastro de funcionários será exibido aqui.</p>
-                </div>
+                <>
+                    <div className="page-header">
+                        <div>
+                            <h1 className='page-title'>Funcionários</h1>
+                            <p className='page-subtitle'>Gerencie os funcionários cadastrados no sistema.</p>
+                        </div>
+                        <button type="button" className="btn-primary" onClick={() => {
+                                setFuncionarioEditando(null);
+                                setFuncionarioForm({
+                                    nome: '',
+                                    documento: '',
+                                    telefone: '',
+                                    email: '',
+                                    senha: '',
+                                    cargo: 'operacional',
+                                    cep: '',
+                                    endereco: '',
+                                    numero: '',
+                                    bairro: '',
+                                    cidade: '',
+                                    estado: '',
+                                    observacoes: '',
+                                });
+                                setModalFuncionarioAberto(true);
+                            }}
+                        >
+                            + Novo funcionário
+                        </button>
+                    </div>
+                    <div className="page-toolbar">
+                        <input className='clientes-search'
+                            type="text"
+                            value={buscaFuncionario}
+                            onChange={(event) =>
+                                setBuscaFuncionario(event.target.value)
+                            }
+                            placeholder="Buscar funcionário..."
+                        />
+
+                        
+                    </div>
+
+                    <div className="table-wraper">
+                        <table className='data-table'>
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Documento</th>
+                                    <th>Telefone</th>
+                                    <th>E-mail</th>
+                                    <th>Cargo</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {carregandoFuncionarios ? (
+                                    <tr>
+                                        <td colSpan="6">
+                                            Carregando funcionários...
+                                        </td>
+                                    </tr>
+                                ) : funcionarios.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6">
+                                            Nenhum funcionário encontrado.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    funcionarios.map((funcionario) => (
+                                        <tr key={funcionario.id}>
+                                            <td>{funcionario.nome}</td>
+
+                                            <td>
+                                                {funcionario.documento
+                                                    ? formatarDocumento(
+                                                        funcionario.documento
+                                                    )
+                                                    : '-'}
+                                            </td>
+
+                                            <td>
+                                                {funcionario.telefone
+                                                    ? formatarTelefone(
+                                                        funcionario.telefone
+                                                    )
+                                                    : '-'}
+                                            </td>
+
+                                            <td>
+                                                {funcionario.email || '-'}
+                                            </td>
+
+                                            <td>
+                                                {funcionario.cargo || '-'}
+                                            </td>
+
+                                            <td>
+                                                <div className="table-actions">
+                                                    <button
+                                                        type="button"
+                                                        className="btn-secondary btn-small"
+                                                        onClick={() => {
+                                                            setFuncionarioEditando(
+                                                                funcionario
+                                                            );
+
+                                                            setFuncionarioForm({
+                                                                nome:
+                                                                    funcionario.nome ||
+                                                                    '',
+                                                                documento:
+                                                                    formatarDocumento(
+                                                                        funcionario.documento ||
+                                                                            ''
+                                                                    ),
+                                                                telefone:
+                                                                    formatarTelefone(
+                                                                        funcionario.telefone ||
+                                                                            ''
+                                                                    ),
+                                                                email:
+                                                                    funcionario.email ||
+                                                                    '',
+                                                                senha: '',
+                                                                cargo:
+                                                                    funcionario.cargo ||
+                                                                    'operacional',
+                                                                cep:
+                                                                    funcionario.cep ||
+                                                                    '',
+                                                                endereco:
+                                                                    funcionario.endereco ||
+                                                                    '',
+                                                                numero:
+                                                                    funcionario.numero ||
+                                                                    '',
+                                                                bairro:
+                                                                    funcionario.bairro ||
+                                                                    '',
+                                                                cidade:
+                                                                    funcionario.cidade ||
+                                                                    '',
+                                                                estado:
+                                                                    funcionario.estado ||
+                                                                    '',
+                                                                observacoes:
+                                                                    funcionario.observacoes ||
+                                                                    '',
+                                                            });
+
+                                                            setModalFuncionarioAberto(
+                                                                true
+                                                            );
+                                                        }}
+                                                    >
+                                                        Editar
+                                                    </button>
+                                                    <button type='button' className='btn-danger btn-small' onClick={() => setFuncionarioParaInativar(funcionario)}>Inativar</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    {modalFuncionarioAberto && (
+                        <div className="modal-backdrop">
+                            <div className="modal-card">
+                                <div className="modal-header">
+                                    <div>
+                                        <h2>
+                                            {funcionarioEditando
+                                                ? 'Editar funcionário'
+                                                : 'Novo funcionário'}
+                                        </h2>
+
+                                        <p>
+                                            Informe os dados e o acesso do funcionário.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className="modal-close"
+                                        onClick={fecharModalFuncionario}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleSalvarFuncionario}>
+                                    <div className="modal-body">
+                                        <div className="form-field">
+                                            <label>Nome *</label>
+                                            <input
+                                                name="nome"
+                                                value={funcionarioForm.nome}
+                                                onChange={handleFuncionarioChange}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="form-grid">
+                                            <div className="form-field">
+                                                <label>CPF / CNPJ</label>
+                                                <input
+                                                    name="documento"
+                                                    value={funcionarioForm.documento}
+                                                    onChange={handleFuncionarioChange}
+                                                    maxLength={18}
+                                                />
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>Telefone</label>
+                                                <input
+                                                    name="telefone"
+                                                    value={funcionarioForm.telefone}
+                                                    onChange={handleFuncionarioChange}
+                                                    maxLength={15}
+                                                />
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>E-mail *</label>
+                                                <input
+                                                    type="email"
+                                                    name="email"
+                                                    value={funcionarioForm.email}
+                                                    onChange={handleFuncionarioChange}
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>Cargo *</label>
+
+                                                <select
+                                                    name="cargo"
+                                                    value={funcionarioForm.cargo}
+                                                    onChange={handleFuncionarioChange}
+                                                >
+                                                    <option value="operacional">
+                                                        Operacional
+                                                    </option>
+
+                                                    <option value="gestor">
+                                                        Gestor
+                                                    </option>
+
+                                                    <option value="administrador">
+                                                        Administrador
+                                                    </option>
+                                                </select>
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>
+                                                    {funcionarioEditando
+                                                        ? 'Nova senha'
+                                                        : 'Senha *'}
+                                                </label>
+
+                                                <input
+                                                    type="password"
+                                                    name="senha"
+                                                    value={funcionarioForm.senha}
+                                                    onChange={handleFuncionarioChange}
+                                                    placeholder={
+                                                        funcionarioEditando
+                                                            ? 'Deixe vazio para manter'
+                                                            : 'Mínimo de 6 caracteres'
+                                                    }
+                                                    required={!funcionarioEditando}
+                                                />
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>CEP</label>
+
+                                                <div className="cep-field">
+                                                    <input
+                                                        name="cep"
+                                                        value={funcionarioForm.cep}
+                                                        onChange={handleFuncionarioChange}
+                                                        onBlur={buscarCepFuncionario}
+                                                        maxLength={9}
+                                                    />
+
+                                                    <button
+                                                        type="button"
+                                                        className="btn-secondary btn-small"
+                                                        onClick={buscarCepFuncionario}
+                                                    >
+                                                        Buscar
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>Endereço</label>
+                                                <input
+                                                    name="endereco"
+                                                    value={funcionarioForm.endereco}
+                                                    onChange={handleFuncionarioChange}
+                                                />
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>Número</label>
+                                                <input
+                                                    name="numero"
+                                                    value={funcionarioForm.numero}
+                                                    onChange={handleFuncionarioChange}
+                                                />
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>Bairro</label>
+                                                <input
+                                                    name="bairro"
+                                                    value={funcionarioForm.bairro}
+                                                    onChange={handleFuncionarioChange}
+                                                />
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>Cidade</label>
+                                                <input
+                                                    name="cidade"
+                                                    value={funcionarioForm.cidade}
+                                                    onChange={handleFuncionarioChange}
+                                                />
+                                            </div>
+
+                                            <div className="form-field">
+                                                <label>Estado</label>
+                                                <input
+                                                    name="estado"
+                                                    value={funcionarioForm.estado}
+                                                    onChange={handleFuncionarioChange}
+                                                    maxLength={2}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="form-field">
+                                            <label>Observações</label>
+
+                                            <textarea
+                                                name="observacoes"
+                                                value={funcionarioForm.observacoes}
+                                                onChange={handleFuncionarioChange}
+                                                rows={3}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="modal-footer">
+                                        <button
+                                            type="button"
+                                            className="btn-secondary"
+                                            onClick={fecharModalFuncionario}
+                                        >
+                                            Cancelar
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            className="btn-primary"
+                                        >
+                                            {funcionarioEditando
+                                                ? 'Salvar alterações'
+                                                : 'Cadastrar funcionário'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                    {funcionarioParaInativar && (
+                        <div className="modal-backdrop">
+                            <div className="modal-card modal-card-small">
+                                <div className="modal-header">
+                                    <div>
+                                        <h2>Inativar funcionário</h2>
+
+                                        <p>
+                                            Confirme a inativação deste usuário.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className="modal-close"
+                                        onClick={() =>
+                                            setFuncionarioParaInativar(null)
+                                        }
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+
+                                <div className="modal-body">
+                                    <p>
+                                        Deseja realmente inativar{' '}
+                                        <strong>
+                                            {funcionarioParaInativar.nome}
+                                        </strong>
+                                        ?
+                                    </p>
+
+                                    <p className="table-muted">
+                                        O funcionário não poderá mais acessar
+                                        o sistema enquanto estiver inativo.
+                                    </p>
+                                </div>
+
+                                <div className="modal-footer">
+                                    <button
+                                        type="button"
+                                        className="btn-secondary"
+                                        onClick={() =>
+                                            setFuncionarioParaInativar(null)
+                                        }
+                                    >
+                                        Cancelar
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="btn-danger"
+                                        onClick={handleInativarFuncionario}
+                                    >
+                                        Inativar funcionário
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

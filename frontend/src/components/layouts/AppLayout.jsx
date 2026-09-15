@@ -59,9 +59,8 @@ const MENU = [
         label: 'Configurações',
         icon: '⚙️',
         children: [
-            { label: 'Empresa', path: '/configuracoes?aba=empresa' },
-            { label: 'Usuários', path: '/configuracoes?aba=usuarios' },
-            { label: 'Caixa', path: '/configuracoes?aba=caixa' },
+            { label: 'Empresa', path: '/configuracoes/empresa' },
+            { label: 'Aparência', path: '/configuracoes/aparencia' },
         ],
     },
     ];
@@ -204,11 +203,7 @@ function AppLayout() {
 
             <div className="app-main">
                 <header className="topbar">
-                    <label className="topbar__search">
-                        <span>⌕</span>
-                        <input type="text" placeholder="Buscar..." />
-                    </label>
-
+                    
                     <div className='profile'>
                         <button type='button' className='profile__button' onClick={() => setPerfilAberto((aberto) => !aberto)}>
                             <div className="avatar">{iniciais}</div>

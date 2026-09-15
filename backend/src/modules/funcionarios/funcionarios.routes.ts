@@ -9,7 +9,7 @@ export const funcionariosRoutes = Router();
 
 funcionariosRoutes.use(requireAuth);
 
-const cargosPermitidos = [ 'administrador', 'gestor', 'vendedor', ];
+const cargosPermitidos = [ 'administrador', 'gestor', 'operacional', ];
 
 funcionariosRoutes.get('/',requireRole('administrador', 'gestor'), async ( req: Request, res: Response, next: NextFunction ) => {
     try {
