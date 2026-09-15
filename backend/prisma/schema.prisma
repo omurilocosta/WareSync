@@ -122,20 +122,28 @@ model devolucoes {
   @@index([venda_id], map: "idx_devolucoes_venda")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model documentos_fiscais {
-  id                  Int       @id @default(autoincrement())
-  venda_id            Int?
-  tipo                String    @db.VarChar(10)
-  numero              String?   @db.VarChar(20)
-  serie               String?   @default("1") @db.VarChar(5)
-  status              String    @default("pendente") @db.VarChar(15)
-  motivo_rejeicao     String?   @db.VarChar(255)
-  motivo_cancelamento String?   @db.VarChar(255)
-  chave_acesso        String?   @db.VarChar(44)
-  usuario_id          Int
-  emitido_em          DateTime  @default(now()) @db.Timestamptz(6)
-  cancelado_em        DateTime? @db.Timestamptz(6)
+  id                       Int       @id @default(autoincrement())
+  venda_id                 Int?
+  tipo                     String    @db.VarChar(10)
+  numero                   String?   @db.VarChar(20)
+  serie                    String?   @default("1") @db.VarChar(5)
+  status                   String    @default("demonstrativo") @db.VarChar(15)
+  motivo_rejeicao          String?   @db.VarChar(255)
+  motivo_cancelamento      String?   @db.VarChar(255)
+  chave_acesso             String?   @db.VarChar(44)
+  usuario_id               Int
+  emitido_em               DateTime  @default(now()) @db.Timestamptz(6)
+  cancelado_em             DateTime? @db.Timestamptz(6)
+  natureza_operacao        String?   @db.VarChar(120)
+  finalidade               String?   @db.VarChar(30)
+  consumidor_final         Boolean?
+  presenca_comprador       String?   @db.VarChar(30)
+  modalidade_frete         String?   @db.VarChar(30)
+  informacoes_adicionais   String?
+  dados_documento          Json      @default("{}") @db.JsonB
+  sem_validade_fiscal      Boolean   @default(true)
+
   usuarios            usuarios  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   vendas              vendas?   @relation(fields: [venda_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 

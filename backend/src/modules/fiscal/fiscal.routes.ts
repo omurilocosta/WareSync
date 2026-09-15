@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { pool } from '../../config/database';
 import { AppError } from '../../middlewares/error.middleware';
 import { requireAuth } from '../../middlewares/auth.middleware';
+import { buscarVendaPorId } from '../vendas/vendas.service';
 
 export const fiscalRoutes = Router();
 
@@ -17,55 +18,149 @@ fiscalRoutes.use(requireAuth);
  * de tela funcionando. Trocar por uma chamada real ao provedor escolhido
  * antes de usar em produção.
  */
-async function emitirDocumentoSimulado(tipo: 'NFE' | 'NFCE', vendaId: number, usuarioId: number) {
-  const { rows: numeroRows } = await pool.query(
-    `SELECT COALESCE(MAX(CAST(numero AS INTEGER)), 0) + 1 AS proximo FROM documentos_fiscais WHERE tipo = $1`,
-    [tipo]
-  );
-  const numero = String(numeroRows[0].proximo).padStart(6, '0');
-  const chaveAcesso = Array.from({ length: 44 }, () => Math.floor(Math.random() * 10)).join('');
 
+async function emitirDocumentoDemonstrativo( tipo: 'NFE' | 'NFCE', vendaId: number, usuarioId: number) {
   const { rows } = await pool.query(
-    `INSERT INTO documentos_fiscais (venda_id, tipo, numero, status, chave_acesso, usuario_id)
-     VALUES ($1, $2, $3, 'autorizado', $4, $5)
-     RETURNING *`,
-    [vendaId, tipo, numero, chaveAcesso, usuarioId]
+      `
+      INSERT INTO documentos_fiscais (
+          venda_id,
+          tipo,
+          status,
+          chave_acesso,
+          usuario_id,
+          sem_validade_fiscal
+      )
+      VALUES (
+          $1,
+          $2,
+          'demonstrativo',
+          NULL,
+          $3,
+          TRUE
+      )
+      RETURNING *
+      `,
+      [vendaId, tipo, usuarioId]
   );
-  return rows[0];
+
+  const documento = rows[0];
+
+  const numeroDemonstrativo =
+      `DEM-${String(documento.id).padStart(6, '0')}`;
+
+  const { rows: documentoAtualizado } =
+      await pool.query(
+          `
+          UPDATE documentos_fiscais
+          SET numero = $1
+          WHERE id = $2
+          RETURNING *
+          `,
+          [
+              numeroDemonstrativo,
+              documento.id,
+          ]
+      );
+
+  return documentoAtualizado[0];
 }
 
-fiscalRoutes.post('/emitir', async (req: Request, res: Response, next: NextFunction) => {
+fiscalRoutes.post('/emitir', async (req: Request,res: Response, next: NextFunction) => {
   try {
-    const { venda_id, tipo } = req.body;
-    const usuarioId = req.session.usuarioId || 1;
+      const { venda_id, tipo } = req.body;
 
-    if (!venda_id || !['NFE', 'NFCE'].includes(tipo)) {
-      throw new AppError('Informe a venda e o tipo de documento (NFE ou NFCE).', 422);
-    }
+      const usuarioId = req.session.usuarioId;
 
-    const { rows: vendaRows } = await pool.query('SELECT * FROM vendas WHERE id = $1', [venda_id]);
-    if (!vendaRows[0]) throw new AppError('Venda não encontrada.', 404);
-    if (vendaRows[0].status !== 'finalizada') {
-      throw new AppError('Só é possível emitir documento fiscal para vendas finalizadas.', 422);
-    }
+      if (!usuarioId) {
+          throw new AppError(
+              'Usuário não autenticado.',
+              401
+          );
+      }
 
-    const existente = await pool.query(
-      `SELECT id FROM documentos_fiscais WHERE venda_id = $1 AND tipo = $2 AND status = 'autorizado'`,
-      [venda_id, tipo]
-    );
-    if (existente.rows[0]) {
-      throw new AppError('Já existe um documento autorizado para esta venda.', 422);
-    }
+      if (
+          !venda_id ||
+          !['NFE', 'NFCE'].includes(tipo)
+      ) {
+          throw new AppError(
+              'Informe a venda e o tipo de documento (NFE ou NFCE).',
+              422
+          );
+      }
 
-    const documento = await emitirDocumentoSimulado(tipo, venda_id, usuarioId);
+      const vendaId = Number(venda_id);
 
-    res.status(201).json({
-      success: true,
-      message: `${tipo === 'NFE' ? 'NF-e' : 'NFC-e'} emitida (simulação).`,
-      data: documento,
-    });
+      if (
+          !Number.isInteger(vendaId) ||
+          vendaId <= 0
+      ) {
+          throw new AppError(
+              'Venda inválida.',
+              422
+          );
+      }
+
+      const { rows: vendaRows } =
+          await pool.query(
+              `
+              SELECT *
+              FROM vendas
+              WHERE id = $1
+              `,
+              [vendaId]
+          );
+
+      const venda = vendaRows[0];
+
+      if (!venda) {
+          throw new AppError(
+              'Venda não encontrada.',
+              404
+          );
+      }
+
+      if (venda.status !== 'finalizada') {
+          throw new AppError(
+              'Só é possível gerar um documento demonstrativo para vendas finalizadas.',
+              422
+          );
+      }
+
+      const existente = await pool.query(
+          `
+          SELECT id
+          FROM documentos_fiscais
+          WHERE venda_id = $1
+            AND tipo = $2
+            AND status = 'demonstrativo'
+          `,
+          [vendaId, tipo]
+      );
+
+      if (existente.rows[0]) {
+          throw new AppError(
+              'Já existe um documento demonstrativo deste tipo para esta venda.',
+              422
+          );
+      }
+
+      const documento =
+          await emitirDocumentoDemonstrativo(
+              tipo,
+              vendaId,
+              usuarioId
+          );
+
+      return res.status(201).json({
+          success: true,
+          message:
+              `${tipo === 'NFE' ? 'NF-e' : 'NFC-e'} demonstrativa gerada com sucesso.`,
+          aviso:
+              'DOCUMENTO DEMONSTRATIVO — SEM VALIDADE FISCAL — NÃO AUTORIZADO PELA SEFAZ',
+          data: documento,
+      });
   } catch (err) {
-    next(err);
+      next(err);
   }
 });
 
@@ -119,6 +214,103 @@ fiscalRoutes.get('/', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
+fiscalRoutes.get('/vendas/:vendaId/preparar',async (req: Request,res: Response,next: NextFunction) => {
+  try {
+      const vendaId = Number(req.params.vendaId);
+
+      if (
+          !Number.isInteger(vendaId) ||
+          vendaId <= 0
+      ) {
+          throw new AppError(
+              'Venda inválida.',
+              422
+          );
+      }
+
+      const venda =
+          await buscarVendaPorId(vendaId);
+
+      if (!venda) {
+          throw new AppError(
+              'Venda não encontrada.',
+              404
+          );
+      }
+
+      if (venda.status !== 'finalizada') {
+          throw new AppError(
+              'Somente vendas finalizadas podem gerar documento demonstrativo.',
+              422
+          );
+      }
+
+      let cliente = null;
+
+      if (venda.cliente_id) {
+          const { rows } = await pool.query(
+              `
+              SELECT
+                  id,
+                  nome,
+                  documento,
+                  email,
+                  telefone,
+                  cep,
+                  endereco,
+                  numero,
+                  bairro,
+                  cidade,
+                  estado
+              FROM clientes
+              WHERE id = $1
+              `,
+              [venda.cliente_id]
+          );
+
+          cliente = rows[0] || null;
+      }
+
+      return res.json({
+          success: true,
+
+          aviso:
+              'DOCUMENTO DEMONSTRATIVO — SEM VALIDADE FISCAL — NÃO AUTORIZADO PELA SEFAZ',
+
+          data: {
+              venda,
+
+              cliente,
+
+              documento: {
+                  natureza_operacao:
+                      'Venda de mercadoria',
+
+                  finalidade:
+                      'normal',
+
+                  consumidor_final:
+                      true,
+
+                  presenca_comprador:
+                      'presencial',
+
+                  modalidade_frete:
+                      'sem_frete',
+
+                  informacoes_adicionais:
+                      '',
+
+                  sem_validade_fiscal:
+                      true,
+              },
+          },
+      });
+  } catch (err) {
+      next(err);
+  }
+});
+
 fiscalRoutes.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Number(req.params.id);
@@ -137,34 +329,90 @@ fiscalRoutes.get('/:id', async (req: Request, res: Response, next: NextFunction)
   }
 });
 
-fiscalRoutes.post('/:id/cancelar', async (req: Request, res: Response, next: NextFunction) => {
+fiscalRoutes.post('/:id/cancelar',async (req: Request,res: Response,next: NextFunction) => {
   try {
-    const id = Number(req.params.id);
-    const { motivo } = req.body;
+      const id = Number(req.params.id);
+      const { motivo } = req.body;
 
-    if (!motivo || motivo.trim() === '') {
-      throw new AppError('Informe o motivo do cancelamento.', 422);
-    }
+      if (
+          !Number.isInteger(id) ||
+          id <= 0
+      ) {
+          throw new AppError(
+              'Documento inválido.',
+              422
+          );
+      }
 
-    const { rows } = await pool.query('SELECT * FROM documentos_fiscais WHERE id = $1', [id]);
-    const documento = rows[0];
-    if (!documento) throw new AppError('Documento não encontrado.', 404);
-    if (documento.status !== 'autorizado') {
-      throw new AppError('Só é possível cancelar documentos autorizados.', 422);
-    }
+      if (
+          !motivo ||
+          typeof motivo !== 'string' ||
+          motivo.trim() === ''
+      ) {
+          throw new AppError(
+              'Informe o motivo do cancelamento.',
+              422
+          );
+      }
 
-    const horasDesdeEmissao = (Date.now() - new Date(documento.emitido_em).getTime()) / 3600000;
-    if (horasDesdeEmissao > 24) {
-      throw new AppError('Prazo para cancelamento expirado (mais de 24h desde a emissão).', 422);
-    }
+      const { rows } = await pool.query(
+          `
+          SELECT *
+          FROM documentos_fiscais
+          WHERE id = $1
+          `,
+          [id]
+      );
 
-    await pool.query(
-      `UPDATE documentos_fiscais SET status = 'cancelado', motivo_cancelamento = $1, cancelado_em = NOW() WHERE id = $2`,
-      [motivo.trim(), id]
-    );
+      const documento = rows[0];
 
-    res.json({ success: true, message: 'Documento fiscal cancelado.' });
+      if (!documento) {
+          throw new AppError(
+              'Documento demonstrativo não encontrado.',
+              404
+          );
+      }
+
+      if (documento.status === 'cancelado') {
+          throw new AppError(
+              'Este documento demonstrativo já está cancelado.',
+              422
+          );
+      }
+
+      if (documento.status !== 'demonstrativo') {
+          throw new AppError(
+              'Somente documentos demonstrativos podem ser cancelados por este fluxo.',
+              422
+          );
+      }
+
+      const { rows: documentoCancelado } =
+          await pool.query(
+              `
+              UPDATE documentos_fiscais
+              SET
+                  status = 'cancelado',
+                  motivo_cancelamento = $1,
+                  cancelado_em = NOW()
+              WHERE id = $2
+              RETURNING *
+              `,
+              [
+                  motivo.trim(),
+                  id,
+              ]
+          );
+
+      return res.json({
+          success: true,
+          message:
+              'Documento demonstrativo cancelado com sucesso.',
+          aviso:
+              'DOCUMENTO DEMONSTRATIVO — SEM VALIDADE FISCAL',
+          data: documentoCancelado[0],
+      });
   } catch (err) {
-    next(err);
+      next(err);
   }
 });
