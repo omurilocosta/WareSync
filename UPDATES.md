@@ -2542,3 +2542,314 @@ Observações importantes:
 - O banco PostgreSQL já existia antes do Prisma; alterações estruturais continuam sendo feitas de forma controlada no banco e refletidas manualmente no `schema.prisma`.
 - Evitar `prisma db push` ou migrações destrutivas sem revisão do impacto no banco existente.
 - Não editar manualmente `src/generated/prisma/`.
+
+## Atualização — 14/09/2026
+
+### Funcionários — frontend React
+
+Foi concluída a integração inicial da aba **Funcionário** com o backend já existente.
+
+Criado:
+
+```text
+frontend/src/services/funcionariosService.js
+```
+
+Operações integradas:
+
+```text
+GET    /api/funcionarios
+POST   /api/funcionarios
+PUT    /api/funcionarios/:id
+DELETE /api/funcionarios/:id
+```
+
+O service passou a disponibilizar:
+
+```text
+listarFuncionarios()
+criarFuncionario()
+atualizarFuncionario()
+inativarFuncionario()
+```
+
+---
+
+### Aba Funcionário — listagem
+
+A aba **Funcionário**, dentro da área de Cadastros, passou a possuir:
+
+```text
+busca de funcionários
+listagem
+nome
+CPF/CNPJ formatado
+telefone formatado
+e-mail
+cargo
+ações
+```
+
+Também foram adicionados:
+
+```text
++ Novo funcionário
+Editar
+Inativar
+```
+
+A busca é integrada diretamente à API `/api/funcionarios`.
+
+Situação:
+
+```text
+Listagem                 ✅
+Busca                    ✅
+Documento formatado      ✅
+Telefone formatado       ✅
+Exibição do cargo        ✅
+```
+
+---
+
+### Funcionários — cadastro e edição
+
+Foi criado o modal de cadastro e edição de funcionários.
+
+Campos disponíveis:
+
+```text
+Nome
+CPF/CNPJ
+Telefone
+E-mail
+Cargo
+Senha
+CEP
+Endereço
+Número
+Bairro
+Cidade
+Estado
+Observações
+```
+
+Foram reaproveitadas as validações já utilizadas nos cadastros de Clientes e Fornecedores.
+
+Validações:
+
+```text
+nome obrigatório
+e-mail obrigatório
+CPF/CNPJ válido
+telefone válido com DDD
+CEP com 8 dígitos
+número obrigatório quando houver endereço
+senha mínima de 6 caracteres
+```
+
+Também foram integradas:
+
+```text
+máscara de CPF/CNPJ
+máscara de telefone
+máscara de CEP
+normalização da UF
+consulta ViaCEP
+toasts
+```
+
+Na edição, a senha é opcional:
+
+```text
+senha vazia       → mantém a senha atual
+senha preenchida  → altera a senha
+```
+
+Situação:
+
+```text
+Cadastro                     ✅
+Edição                       ✅
+CPF/CNPJ                     ✅
+Telefone                     ✅
+CEP / ViaCEP                 ✅
+Cargo                        ✅
+Senha                        ✅
+Senha opcional na edição     ✅
+Toasts                       ✅
+```
+
+---
+
+### Funcionários — inativação
+
+Foi adicionada a opção de inativar funcionários pela interface.
+
+Fluxo:
+
+```text
+Funcionário
+↓
+Inativar
+↓
+modal de confirmação
+↓
+DELETE /api/funcionarios/:id
+↓
+ativo = false
+```
+
+Após a inativação, a listagem é atualizada automaticamente.
+
+O backend também possui proteção para impedir que o usuário autenticado inative a própria conta.
+
+Situação:
+
+```text
+Botão Inativar                 ✅
+Modal de confirmação           ✅
+Inativação lógica              ✅
+Atualização da listagem        ✅
+Proteção contra auto-inativação ✅
+```
+
+---
+
+### Correção — cargos de usuário
+
+Durante o cadastro de funcionário foi identificado o erro Prisma:
+
+```text
+P2039
+```
+
+Causa identificada:
+
+```text
+usuarios_cargo_check
+```
+
+A constraint existente no PostgreSQL permite apenas:
+
+```text
+administrador
+gestor
+operacional
+```
+
+O novo módulo de Funcionários havia sido criado inicialmente utilizando:
+
+```text
+vendedor
+```
+
+Esse valor não era permitido pelo banco e provocava a violação da CHECK CONSTRAINT.
+
+Constraint verificada:
+
+```text
+usuarios_cargo_check
+
+administrador
+gestor
+operacional
+```
+
+Foram corrigidos os cargos permitidos no backend:
+
+```text
+administrador
+gestor
+operacional
+```
+
+O frontend também foi atualizado.
+
+Antes:
+
+```text
+vendedor
+```
+
+Agora:
+
+```text
+operacional
+gestor
+administrador
+```
+
+O valor padrão do formulário de funcionário passou a ser:
+
+```text
+operacional
+```
+
+Também foi corrigido o model Prisma.
+
+Antes:
+
+```prisma
+cargo String @default("vendedor") @db.VarChar(50)
+```
+
+Depois:
+
+```prisma
+cargo String @default("operacional") @db.VarChar(50)
+```
+
+Após a alteração, o Prisma Client foi regenerado e o backend recompilado.
+
+Situação:
+
+```text
+Backend compatível com CHECK CONSTRAINT    ✅
+Frontend compatível                        ✅
+Prisma compatível                          ✅
+Cargo vendedor removido do novo fluxo      ✅
+Cargo operacional utilizado                ✅
+```
+
+---
+
+### Situação atual de Funcionários
+
+```text
+Banco / model Prisma             ✅
+Backend CRUD                     ✅
+Listagem frontend                ✅
+Busca                            ✅
+Cadastro                         ✅
+Edição                           ✅
+Alteração opcional de senha      ✅
+CPF/CNPJ                         ✅
+Telefone                         ✅
+CEP / ViaCEP                     ✅
+Cargo                            ✅
+Inativação                       ✅
+Toasts                           ✅
+```
+
+### Próximo ponto
+
+Com o módulo de Funcionários praticamente concluído, o próximo item planejado é:
+
+```text
+remover barra de busca do Dashboard
+```
+
+Depois:
+
+```text
+módulo Fiscal demonstrativo
+↓
+testes automatizados
+↓
+refatoração geral
+↓
+revisão de segurança e permissões
+↓
+documentação final
+```
