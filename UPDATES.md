@@ -2853,3 +2853,349 @@ revisão de segurança e permissões
 ↓
 documentação final
 ```
+## Atualização — 15/09/2026
+
+### Dashboard — remoção da busca
+
+A barra de busca existente na área superior do Dashboard/Layout foi removida.
+
+Foram preservados os demais elementos do cabeçalho:
+
+```text
+usuário autenticado
+nome
+cargo
+avatar
+logout
+```
+
+Situação:
+
+```text
+Barra de busca removida    ✅
+Demais elementos mantidos  ✅
+```
+
+---
+
+### Fiscal — revisão da estrutura existente
+
+Foi iniciada a revisão do módulo Fiscal.
+
+A tabela existente:
+
+```text
+documentos_fiscais
+```
+
+foi analisada antes da implementação de novas funcionalidades.
+
+Estrutura original identificada:
+
+```text
+id
+venda_id
+tipo
+numero
+serie
+status
+motivo_rejeicao
+motivo_cancelamento
+chave_acesso
+usuario_id
+emitido_em
+cancelado_em
+```
+
+Tipos permitidos pela constraint existente:
+
+```text
+NFE
+NFCE
+```
+
+Status originalmente disponíveis:
+
+```text
+pendente
+autorizado
+rejeitado
+cancelado
+```
+
+Também foi confirmado que a tabela ainda não possuía documentos cadastrados.
+
+---
+
+### Fiscal — novo status demonstrativo
+
+Como o módulo não possui integração real com a SEFAZ, foi criado um status específico para documentos simulados:
+
+```text
+demonstrativo
+```
+
+A constraint de status passou a aceitar:
+
+```text
+demonstrativo
+pendente
+autorizado
+rejeitado
+cancelado
+```
+
+O valor padrão de novos documentos também foi alterado de:
+
+```text
+pendente
+```
+
+para:
+
+```text
+demonstrativo
+```
+
+---
+
+### Fiscal — expansão da tabela
+
+A tabela `documentos_fiscais` foi ampliada com os campos:
+
+```text
+natureza_operacao
+finalidade
+consumidor_final
+presenca_comprador
+modalidade_frete
+informacoes_adicionais
+dados_documento
+sem_validade_fiscal
+```
+
+O campo:
+
+```text
+dados_documento
+```
+
+utiliza:
+
+```text
+JSONB
+```
+
+e será utilizado para armazenar um snapshot dos dados do documento no momento da geração.
+
+O campo:
+
+```text
+sem_validade_fiscal
+```
+
+possui:
+
+```text
+DEFAULT TRUE
+```
+
+---
+
+### Fiscal — Prisma
+
+O model `documentos_fiscais` foi atualizado no:
+
+```text
+backend/prisma/schema.prisma
+```
+
+O status padrão passou a ser:
+
+```prisma
+status String @default("demonstrativo") @db.VarChar(15)
+```
+
+Foram adicionados ao Prisma:
+
+```prisma
+natureza_operacao
+finalidade
+consumidor_final
+presenca_comprador
+modalidade_frete
+informacoes_adicionais
+dados_documento
+sem_validade_fiscal
+```
+
+O campo JSON foi configurado como:
+
+```prisma
+dados_documento Json @default("{}") @db.JsonB
+```
+
+Após a alteração:
+
+```text
+npx prisma generate   ✅
+npm run build         ✅
+```
+
+---
+
+### Fiscal — módulo existente reaproveitado
+
+Durante o desenvolvimento foi identificado que o projeto já possuía:
+
+```text
+backend/src/modules/fiscal/fiscal.routes.ts
+```
+
+Por isso, a implementação existente passou a ser reaproveitada em vez da criação de um segundo módulo Fiscal.
+
+O módulo antigo utilizava diretamente:
+
+```text
+pg / pool
+```
+
+e já possuía:
+
+```text
+POST /api/fiscal/emitir
+GET  /api/fiscal
+GET  /api/fiscal/:id
+POST /api/fiscal/:id/cancelar
+```
+
+---
+
+### Fiscal — correção da antiga simulação
+
+O fluxo antigo simulava uma emissão fiscal utilizando:
+
+```text
+status = autorizado
+```
+
+e gerava uma chave aleatória com:
+
+```text
+44 dígitos
+```
+
+Também utilizava:
+
+```text
+req.session.usuarioId || 1
+```
+
+Esse comportamento foi removido do novo fluxo.
+
+Agora o demonstrativo utiliza:
+
+```text
+status = demonstrativo
+chave_acesso = NULL
+sem_validade_fiscal = TRUE
+```
+
+Além disso, o fallback:
+
+```text
+usuarioId || 1
+```
+
+foi removido.
+
+A geração agora exige uma sessão autenticada real.
+
+---
+
+### Fiscal — numeração demonstrativa
+
+Foi criado um identificador explicitamente não fiscal para os documentos:
+
+```text
+DEM-000001
+DEM-000002
+DEM-000003
+...
+```
+
+A numeração utiliza o ID interno do documento e não tenta simular uma numeração fiscal oficial.
+
+Fluxo:
+
+```text
+criar documento
+↓
+obter ID
+↓
+gerar DEM-XXXXXX
+↓
+atualizar documento
+```
+
+---
+
+### Fiscal — emissão demonstrativa
+
+O fluxo de emissão passou a trabalhar apenas com vendas:
+
+```text
+status = finalizada
+```
+
+Antes da geração são validados:
+
+```text
+venda existente
+venda finalizada
+tipo NFE ou NFCE
+usuário autenticado
+documento demonstrativo duplicado
+```
+
+Mensagem do novo fluxo:
+
+```text
+NF-e demonstrativa gerada com sucesso.
+```
+
+ou:
+
+```text
+NFC-e demonstrativa gerada com sucesso.
+```
+
+O retorno também informa explicitamente:
+
+```text
+DOCUMENTO DEMONSTRATIVO
+SEM VALIDADE FISCAL
+NÃO AUTORIZADO PELA SEFAZ
+```
+
+---
+
+### Fiscal — cancelamento demonstrativo
+
+O cancelamento antigo também foi revisado.
+
+Anteriormente exigia:
+
+```text
+status = autorizado
+```
+
+e aplicava automaticamente um prazo de:
+
+```text
+24 horas
+```
+
+Essas regras foram removidas do fluxo demonstrativo.
+
+Agora o cancelamento interno aceita apenas:
